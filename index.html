@@ -285,7 +285,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
         <li><b>移動</b>画面左をドラッグ。スティックを配置したときはその上から</li>
         <li><b>視点</b>それ以外の場所をドラッグ</li>
         <li><b>射撃</b>ボタン長押し。押したまま狙いも動かせる</li>
-        <li><b>狙う</b>狙うボタンで構える。拡大して弾のばらつきが減る。SR はスコープ</li>
+        <li><b>狙う</b>狙うボタンで構える。拡大して弾のばらつきが減る。SR はスコープ、ほかはドットサイトを覗く</li>
         <li><b>武器</b>武器ボタンで SMG・AR・SR・LMG・SG を切り替え。対戦では出撃のたびに一丁だけ選ぶ</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる。倉庫街の階段は歩くだけで上がれる</li>
         <li><b>マップ</b>コンテナ場と倉庫街の2つ。対戦では、先に部屋にいた人のマップに全員がそろう</li>
@@ -773,6 +773,15 @@ const WEAPONS = [
   { name: 'SG', tip: '散弾・至近距離', mag: 6, cd: 0.8, dmg: 9, pd: 10, n: 8, sp: 0.17, as: 0.56, fo: [7, 20, 0.25], rl: 2, zoom: 1.2, ar: 9, mv: 1, kick: 2.4, snd: [0.22, 2600, 180, 0.42, 110], model: [0.4, 0.4, 0.021, 0, 0, 0.16] }
 ];
 const gun = new THREE.Group(); gun.scale.setScalar(0.8); gunScene.add(gun);
+// Reflex sight on every weapon without a scope: a rail and a mount carrying a frame around a glass window SW wide and SH tall, its sill SY above the middle of the body and SZ behind it.
+// The middle of the window is the point the eye comes to when aiming, and the dot is drawn where the line of sight crosses the glass.
+const SW = 0.048, SH = 0.04, SY = 0.068, SZ = 0.13;
+const RS = { base: new THREE.BoxGeometry(0.034, 0.018, 0.06), rail: new THREE.BoxGeometry(0.026, 0.006, 0.2), post: new THREE.BoxGeometry(0.005, SH, 0.02), bar: new THREE.BoxGeometry(SW + 0.01, 0.005, 0.02), knob: new THREE.CylinderGeometry(0.007, 0.007, 0.008, 8), lens: new THREE.PlaneGeometry(SW, SH) };
+const sightMat = new THREE.MeshLambertMaterial({ color: 0x222a35 });
+const lensMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, map: canvasTex(64, 64, g => {
+  g.fillStyle = 'rgba(120,205,195,.1)'; g.fillRect(0, 0, 64, 64);
+  const s = g.createLinearGradient(0, 64, 64, 0); s.addColorStop(0.3, 'rgba(255,255,255,0)'); s.addColorStop(0.46, 'rgba(255,255,255,.1)'); s.addColorStop(0.6, 'rgba(255,255,255,0)'); g.fillStyle = s; g.fillRect(0, 0, 64, 64);
+}) });
 const guns = WEAPONS.map(w => {
   const [len, br, bt, mh, mw, st] = w.model, g = new THREE.Group(), f = 0.21 - len;
   const body = new THREE.MeshLambertMaterial({ color: 0x2b323d }), acc = new THREE.MeshLambertMaterial({ color: 0xffb347 }), blk = new THREE.MeshLambertMaterial({ color: 0x12161d });
@@ -782,12 +791,23 @@ const guns = WEAPONS.map(w => {
   if (mh) mk(new THREE.BoxGeometry(mw, mh, 0.06), blk, 0, -0.03 - mh / 2, 0.02, g).rotation.x = 0.2;
   mk(new THREE.BoxGeometry(0.045, 0.12, 0.07), blk, 0, -0.09, 0.15, g).rotation.x = -0.3;
   if (st) mk(new THREE.BoxGeometry(0.05, 0.08, st), body, 0, -0.015, 0.21 + st / 2, g);
-  if (w.scope) { mk(new THREE.CylinderGeometry(0.024, 0.024, 0.22, 10), blk, 0, 0.085, 0.02, g).rotation.x = Math.PI / 2; mk(new THREE.BoxGeometry(0.016, 0.03, 0.14), blk, 0, 0.055, 0.02, g); }
-  else mk(new THREE.BoxGeometry(0.02, 0.035, 0.1), blk, 0, 0.06, 0.02, g);
+  // eye: height and depth of the point on the gun that the eye lines up with when aiming, and how far in front of the eye it then sits
+  if (w.scope) { mk(new THREE.CylinderGeometry(0.024, 0.024, 0.22, 10), blk, 0, 0.085, 0.02, g).rotation.x = Math.PI / 2; mk(new THREE.BoxGeometry(0.016, 0.03, 0.14), blk, 0, 0.055, 0.02, g); g.userData.eye = [0.085, 0.13, 0.07]; }
+  else {
+    mk(RS.rail, blk, 0, 0.048, 0.01, g); mk(RS.base, blk, 0, SY - 0.014, SZ - 0.012, g);
+    for (const s of [-1, 1]) { mk(RS.post, sightMat, s * (SW + 0.005) / 2, SY + SH / 2, SZ, g); mk(RS.bar, sightMat, 0, SY + SH / 2 + s * (SH + 0.005) / 2, SZ, g); }
+    mk(RS.knob, acc, 0.021, SY - 0.014, SZ - 0.025, g).rotation.z = Math.PI / 2;
+    g.userData.lens = mk(RS.lens, lensMat, 0, SY + SH / 2, SZ, g); g.userData.eye = [SY + SH / 2, SZ, 0.187];
+  }
   if (w.n > 1) mk(new THREE.BoxGeometry(0.05, 0.04, 0.16), acc, 0, -0.03, f - 0.12, g); // pump grip
   g.userData.fz = f - br - 0.01; g.visible = false; gun.add(g); return g;
 });
 const flash = glow(0xffc46b, 0.3); flash.position.set(0, 0.012, -0.52); flash.visible = false; gun.add(flash);
+// The dot and the ring that marks a lock: flat on the glass, always on the line of sight, so they sit on the point of aim however the gun sways.
+const reticle = (size, draw) => { const m = mk(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: canvasTex(size, size, draw), transparent: true, depthWrite: false }), 0, 0, 0, gunScene); m.renderOrder = 2; m.visible = false; return m; };
+const dot = reticle(64, g => { const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,236,224,1)'); r.addColorStop(0.16, 'rgba(255,70,48,1)'); r.addColorStop(0.28, 'rgba(255,45,30,.9)'); r.addColorStop(0.42, 'rgba(255,40,24,.28)'); r.addColorStop(1, 'rgba(255,40,24,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
+const dotRing = reticle(128, g => { g.strokeStyle = 'rgba(255,60,40,.95)'; g.lineWidth = 6; g.shadowColor = '#ff3020'; g.shadowBlur = 6; g.beginPath(); g.arc(64, 64, 52, 0, 7); g.stroke(); });
+const m4 = new THREE.Matrix4();
 
 /* ---------- pools: tracers, flashes, bolts ---------- */
 const tracers = [];
@@ -893,7 +913,7 @@ function floorAt(x, z, feet) { // highest surface under the player that is no mo
   return f;
 }
 let pvp = false, stepLag = 0; const liveRemotes = [];
-let state = 'menu', wave = 0, score = 0, wi = 1, W = WEAPONS[1], ammo = W.mag, reloadT = 0, fireCd = 0, swapT = 0, recoil = 0, bob = 0, aiming = false, ads = 0;
+let state = 'menu', wave = 0, score = 0, wi = 1, W = WEAPONS[1], ammo = W.mag, reloadT = 0, fireCd = 0, swapT = 0, recoil = 0, bob = 0, aiming = false, ads = 0, lockOn = false;
 const mags = WEAPONS.map(w => w.mag), cds = WEAPONS.map(() => 0); // each weapon keeps its own magazine and its own cooldown
 function setWeapon(i, quiet) {
   i = (i + WEAPONS.length) % WEAPONS.length; if (i === wi && !quiet) return;
@@ -969,7 +989,7 @@ function fire() {
     }
     const hx = P.x + d.x * tHit, hy = P.ey + d.y * tHit, hz = P.z + d.z * tHit;
     // tracer from the muzzle
-    const mx = P.x + cy * side + d.x * 0.7, my = P.ey - 0.16 + d.y * 0.7, mz = P.z - sy * side + d.z * 0.7;
+    const mx = P.x + cy * side + d.x * 0.7, my = P.ey - 0.16 + 0.11 * ads + d.y * 0.7, mz = P.z - sy * side + d.z * 0.7;
     const tr = tracers[tracerI = (tracerI + 1) % tracers.length], len = Math.hypot(hx - mx, hy - my, hz - mz);
     tr.m.position.set((mx + hx) / 2, (my + hy) / 2, (mz + hz) / 2); tr.m.lookAt(hx, hy, hz); tr.m.scale.z = len; tr.m.visible = true; tr.life = 0.06;
     if (hitE) {
@@ -1349,11 +1369,11 @@ if (standalone) {
 }).catch(() => { vsNote.textContent = vsOff; });
 
 /* ---------- loop ---------- */
-let baseFov = 72, wasScoped = false, crossD = 0;
+let baseFov = 72, wasScoped = false, crossD = 0, crossO = 0.5;
 function resize() {
   const w = innerWidth, h = innerHeight, a = w / h;
   renderer.setSize(w, h, false); camera.aspect = gunCam.aspect = a; camera.fov = baseFov = a < 1 ? 88 : 72; camera.updateProjectionMatrix(); gunCam.updateProjectionMatrix();
-  gun.userData.x = Math.min(0.22, 0.2 * a);
+  gun.userData.x = Math.min(0.22, 0.2 * a); gun.userData.far = Math.max(1, 0.76 / a); // on a tall screen the raised gun is held further out, so the sight does not fill the width
 }
 addEventListener('resize', resize); resize();
 
@@ -1372,7 +1392,7 @@ function drawRadar() {
 
 function update(dt) {
   time += dt;
-  if (pvp && (net.dead > 0 || net.pick)) { vsSync(dt); return; }
+  if (pvp && (net.dead > 0 || net.pick)) { ads = Math.max(0, ads - dt * W.ar); vsSync(dt); return; } // the gun comes down while waiting to spawn
   // player
   let mx = joy.x, my = joy.y; if (Math.hypot(mx, my) < 0.12) mx = my = 0;
   if (keys.KeyW || keys.ArrowUp) my -= 1; if (keys.KeyS || keys.ArrowDown) my += 1; if (keys.KeyA || keys.ArrowLeft) mx -= 1; if (keys.KeyD || keys.ArrowRight) mx += 1;
@@ -1395,9 +1415,9 @@ function update(dt) {
   fireCd -= dt; swapT -= dt; recoil = Math.max(0, recoil - dt * 9);
   if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) ammo = W.mag; }
   ads = clamp(ads + (aiming && reloadT <= 0 && swapT <= 0 ? 1 : -1) * dt * W.ar, 0, 1);
-  const onTarget = !pvp && !!findTarget(0.022 / (1 + (W.zoom - 1) * ads)); // versus: no lock-on cue and no auto fire
-  hudEl.cross.classList.toggle('lock', onTarget);
-  if (firing || mouseFire || (cfg.auto && onTarget)) fire();
+  lockOn = !pvp && !!findTarget(0.022 / (1 + (W.zoom - 1) * ads)); // versus: no lock-on cue and no auto fire
+  hudEl.cross.classList.toggle('lock', lockOn);
+  if (firing || mouseFire || (cfg.auto && lockOn)) fire();
   if (pvp) { vsSync(dt); return; }
   // spawning and waves
   if (queue.length) { spawnT -= dt; if (spawnT <= 0 && enemies.length < Math.min(7 + wave, 14)) { spawnEnemy(queue.shift()); spawnT = Math.max(0.45, 1.5 - wave * 0.08); } }
@@ -1465,14 +1485,29 @@ function frame(now) {
   if (cd + wi / 8 !== crossD) { crossD = cd + wi / 8; hudEl.cross.style.setProperty('--d', cd + 'px'); hudEl.cross.classList.toggle('ring', W.n > 1); }
   const scoped = !!W.scope && ads > 0.9 && state !== 'menu' && state !== 'edit';
   if (scoped !== wasScoped) { wasScoped = scoped; document.body.classList.toggle('scoped', scoped); }
+  let co = 0.5;
   if (state === 'menu') { const a = now / 14000, [cr, cy, cx, cz, cp] = MAP.cam; camera.position.set(Math.sin(a) * cr + cx, cy, Math.cos(a) * cr + cz); camera.rotation.set(cp, a + 0.9, 0); gun.visible = false; }
   else {
     const bobY = reduceMotion ? 0 : Math.sin(bob) * 0.035;
     camera.position.set(P.x, P.ey + bobY, P.z); camera.rotation.set(P.pitch + recoil * 0.012, P.yaw, 0);
-    gun.visible = !scoped; const rl = reloadT > 0 ? Math.sin(Math.min(1, (W.rl - reloadT) / W.rl) * Math.PI) : 0, sw = Math.max(0, swapT / 0.3), hip = 1 - ads;
-    gun.position.set((gun.userData.x + (reduceMotion ? 0 : Math.cos(bob * 0.5) * 0.006)) * hip, -0.21 + ads * 0.075 - rl * 0.16 - sw * 0.2 + bobY * 0.25 * hip, -0.72 + recoil * 0.045);
-    gun.rotation.set(recoil * 0.07 - rl * 0.7 - sw * 0.5, 0.03 * hip, 0);
+    gun.visible = !scoped; const rl = reloadT > 0 ? Math.sin(Math.min(1, (W.rl - reloadT) / W.rl) * Math.PI) : 0, sw = Math.max(0, swapT / 0.3);
+    // Aiming brings the sight up to the eye: the gun moves from the hip until the middle of the sight sits on the line of sight, ed in front of the camera.
+    // sway: how much of the walking bob reaches the gun. A little stays when aiming, so the housing drifts around the dot.
+    const ud = guns[wi].userData, [ey, ez, ed] = ud.eye, e = ads * ads * (3 - 2 * ads), hip = 1 - e, sway = hip + 0.15 * e;
+    gun.position.set(gun.userData.x * hip + (reduceMotion ? 0 : Math.cos(bob * 0.5) * 0.006) * sway, -0.21 * hip - ey * 0.8 * e - rl * 0.16 - sw * 0.2 + bobY * 0.25 * sway, -0.72 * hip - (ed * gun.userData.far + ez * 0.8) * e + recoil * 0.045 * (1 - 0.5 * e));
+    gun.rotation.set(recoil * 0.07 * (1 - 0.75 * e) - rl * 0.7 - sw * 0.5, 0.03 * hip, 0);
+    flash.scale.setScalar(0.3 - 0.12 * e);
+    let da = 0;
+    if (ud.lens && gun.visible) { // where the line of sight crosses the glass, in the window's own frame; the camera looks down -z from the origin
+      gun.updateMatrixWorld(); m4.copy(ud.lens.matrixWorld).invert(); v2.set(0, 0, 0).applyMatrix4(m4); v1.set(0, 0, -1).applyMatrix4(m4).sub(v2);
+      const t = -v2.z / v1.z, r = clamp(innerHeight * 0.0045, 2.2, 4) * t * 2 * Math.tan(gunCam.fov * Math.PI / 360) / innerHeight; // r: the dot's core, a fixed size on screen
+      da = t > 0 ? clamp(Math.min(SW / 2 - Math.abs(v2.x + v1.x * t), SH / 2 - Math.abs(v2.y + v1.y * t)) / 0.004, 0, 1) : 0; // fades out at the edge of the window
+      dot.position.z = dotRing.position.z = -t; dot.scale.setScalar(r * 7.7); dotRing.scale.setScalar(r * 13.5); dot.material.opacity = dotRing.material.opacity = da;
+    }
+    dot.visible = da > 0; dotRing.visible = da > 0 && lockOn;
+    co = ud.lens ? Math.round(hip * 10) / 20 : 0.5; // the reticle hands over to the dot
   }
+  if (co !== crossO) { crossO = co; hudEl.cross.style.opacity = co; }
   renderer.clear(); renderer.render(scene, camera);
   if (gun.visible) { renderer.clearDepth(); renderer.render(gunScene, gunCam); }
 
