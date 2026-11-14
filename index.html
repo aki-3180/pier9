@@ -227,7 +227,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
         <li><b>右親指</b>画面右をドラッグして視点</li>
         <li><b>射撃</b>ボタン長押し。押したまま狙いも動かせる</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる</li>
-        <li><b>対戦</b>同じページを開いた相手と撃ち合う。3秒で復帰</li>
+        <li><b>対戦</b>同じページを開いた相手と撃ち合う。狙いの補正とオート射撃は無し。3秒で復帰</li>
         <li id="pcHow"><b>パソコン</b>WASD で移動、マウスで狙ってクリック、スペースで跳ぶ、R で装填</li>
       </ul>
     </div>
@@ -492,6 +492,17 @@ function rayBox(ox, oy, oz, dx, dy, dz, b, maxT) {
   }
   return t0;
 }
+// A rival is hit only where the drawn figure is: legs and vest as boxes turned with the body, head as a sphere.
+const BODY = [{ x: 0, z: 0, hx: 0.22, hz: 0.13, y0: 0, h: 0.78 }, { x: 0, z: 0, hx: 0.28, hz: 0.16, y0: 0.77, h: 1.47 }], HEAD_Y = 1.66, HEAD_R = 0.2;
+function rayBody(r, ox, oy, oz, dx, dy, dz, maxT) { // distance along the ray to the figure, or -1
+  const s = Math.sin(r.yaw), c = Math.cos(r.yaw), wx = ox - r.x, wz = oz - r.z;
+  const lx = wx * c - wz * s, ly = oy - r.py, lz = wx * s + wz * c, ex = dx * c - dz * s, ez = dx * s + dz * c; // into the figure's own frame
+  let best = -1;
+  for (const b of BODY) { const t = rayBox(lx, ly, lz, ex, dy, ez, b, maxT); if (t >= 0 && (best < 0 || t < best)) best = t; }
+  const hy = HEAD_Y - ly, tca = -lx * ex + hy * dy - lz * ez, d2 = lx * lx + hy * hy + lz * lz - tca * tca;
+  if (tca >= 0 && d2 <= HEAD_R * HEAD_R) { const t = Math.max(0, tca - Math.sqrt(HEAD_R * HEAD_R - d2)); if (t <= maxT && (best < 0 || t < best)) best = t; }
+  return best;
+}
 function blocked(ox, oy, oz, tx, ty, tz) { // is the segment cut by a container?
   let dx = tx - ox, dy = ty - oy, dz = tz - oz; const L = Math.hypot(dx, dy, dz) || 1; dx /= L; dy /= L; dz /= L;
   for (const b of boxes) if (rayBox(ox, oy, oz, dx, dy, dz, b, L) >= 0) return true;
@@ -521,7 +532,6 @@ function floorAt(x, z, feet) { // highest surface under the player that is no mo
   return f;
 }
 let pvp = false; const liveRemotes = [];
-const targets = () => pvp ? liveRemotes : enemies;
 let state = 'menu', wave = 0, score = 0, ammo = MAG, reloadT = 0, fireCd = 0, recoil = 0, bob = 0;
 let queue = [], spawnT = 0, breakT = 0, time = 0, hurtA = 0, dirA = 0, dirAng = 0;
 const hudEl = { hpNum: $('hpNum'), hpFill: $('hpFill'), wave: $('waveNum'), left: $('leftNum'), score: $('score'), ammo: $('ammo'), cross: $('cross'), hit: $('hit'), hurt: $('hurt'), dmg: $('dmgDir'), ann: $('announce') };
@@ -558,7 +568,7 @@ const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 function aimDir(out) { const cp = Math.cos(P.pitch); return out.set(-Math.sin(P.yaw) * cp, Math.sin(P.pitch), -Math.cos(P.yaw) * cp); }
 function findTarget(cone) { // enemy nearest the crosshair inside the cone (radians), with a clear line
   aimDir(v1); let bestE = null, bestA = 9;
-  for (const e of targets()) {
+  for (const e of enemies) {
     const dx = e.x - P.x, dy = e.y - P.ey, dz = e.z - P.z, L = Math.hypot(dx, dy, dz);
     if (L > 60 || L < 0.01) continue;
     const ang = Math.acos(Math.min(1, (dx * v1.x + dy * v1.y + dz * v1.z) / L)) - Math.atan(e.r / L);
@@ -571,13 +581,14 @@ function fire() {
   if (ammo <= 0) { startReload(); return; }
   ammo--; fireCd = 0.105; recoil = 1; sfx.shot(); if (pvp) net.f++;
   flash.visible = true; flash.material.rotation = Math.random() * 6; setTimeout(() => { flash.visible = false; }, 45);
-  const d = aimDir(v1), t = findTarget(touchMode ? 0.045 : 0.012);
+  const d = aimDir(v1), t = pvp ? null : findTarget(touchMode ? 0.045 : 0.012); // versus: no snap and no spread, the shot goes exactly through the crosshair
   if (t) d.set(t.x - P.x, t.y - P.ey, t.z - P.z).normalize();
-  else { d.x += (Math.random() - 0.5) * 0.012; d.y += (Math.random() - 0.5) * 0.012; d.normalize(); }
+  else if (!pvp) { d.x += (Math.random() - 0.5) * 0.012; d.y += (Math.random() - 0.5) * 0.012; d.normalize(); }
   let tHit = 80, hitE = null;
   if (d.y < -1e-4) tHit = Math.min(tHit, -P.ey / d.y);
   for (const b of boxes) { const tb = rayBox(P.x, P.ey, P.z, d.x, d.y, d.z, b, tHit); if (tb >= 0) tHit = tb; }
-  for (const e of targets()) {
+  if (pvp) for (const r of liveRemotes) { const te = rayBody(r, P.x, P.ey, P.z, d.x, d.y, d.z, tHit); if (te >= 0 && te < tHit) { tHit = te; hitE = r; } }
+  else for (const e of enemies) {
     const ox = e.x - P.x, oy = e.y - P.ey, oz = e.z - P.z, tca = ox * d.x + oy * d.y + oz * d.z; if (tca < 0) continue;
     const d2 = ox * ox + oy * oy + oz * oz - tca * tca, r = e.r * 1.1; if (d2 > r * r) continue;
     const te = tca - Math.sqrt(r * r - d2); if (te < tHit) { tHit = te; hitE = e; }
@@ -904,7 +915,7 @@ function update(dt) {
   // weapon
   fireCd -= dt; recoil = Math.max(0, recoil - dt * 9);
   if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) ammo = MAG; }
-  const onTarget = !!findTarget(0.022);
+  const onTarget = !pvp && !!findTarget(0.022); // versus: no lock-on cue and no auto fire
   hudEl.cross.classList.toggle('lock', onTarget);
   if (firing || mouseFire || (cfg.auto && onTarget)) fire();
   if (pvp) { vsSync(dt); return; }
