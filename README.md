@@ -6,7 +6,7 @@
 
 `index.html` をブラウザで開くだけで動きます（ビルド不要）。3D ライブラリ three.js r128 と Web フォントを CDN から読み込むので、通信が必要です。
 
-GitHub Pages で公開する場合は、リポジトリの Settings → Pages で `main` ブランチのルートを指定してください。
+Vercel で公開する場合は、このリポジトリを Vercel に取り込み、Framework Preset を「Other」、Build Command と Output Directory を空のままにしてデプロイしてください（静的ファイルだけなのでビルドは不要です）。
 
 | 操作 | タッチ | パソコン |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ GitHub Pages で公開する場合は、リポジトリの Settings → Pages �
 
 ## オンライン対戦について
 
-対戦モードは claude.ai のアーティファクトとして開いたときだけ動きます。プレイヤー同士の通信に claude.ai 側の仕組み（`window.claude.use("room")`）を使っているためで、このリポジトリの `index.html` を単体で開いた場合や GitHub Pages では、対戦ボタンは無効のままです。単体で対戦を動かすには、自前の通信サーバー（WebSocket など）への置き換えが必要です。
+対戦モードは claude.ai のアーティファクトとして開いたときだけ動きます。プレイヤー同士の通信に claude.ai 側の仕組み（`window.claude.use("room")`）を使っているためで、このリポジトリの `index.html` を単体で開いた場合や Vercel などの外部ホスティングでは、対戦ボタンは無効のままです。単体で対戦を動かすには、自前の通信サーバー（WebSocket など）への置き換えが必要です。
 
 ## 構成
 
