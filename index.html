@@ -144,8 +144,17 @@ body.touch #pcHow{display:none}
 #playerName.need{border-color:var(--alarm)}
 #killLog{top:calc(88px + var(--sat));left:var(--sal);display:none;flex-direction:column;gap:3px;align-items:flex-start;max-width:70vw}
 body.vs #killLog{display:flex}
-body.editing #killLog{visibility:hidden}
+body.editing #killLog,body.editing #chatBar{visibility:hidden}
 #killLog div{font-size:13px;font-weight:700;line-height:1.3;padding:2px 8px;background:var(--panel);border-radius:3px;white-space:nowrap;animation:klog 6s linear forwards}
+#killLog div.say{white-space:normal;overflow-wrap:anywhere;max-width:min(70vw,360px);animation-duration:9s}
+#chatBtn{display:none;pointer-events:auto;width:44px;height:44px;border:1px solid var(--line);background:var(--panel);color:var(--signal);border-radius:4px;place-items:center;padding:0;cursor:pointer;
+  font-family:var(--f-body);font-weight:700;font-size:12px}
+body.vs #chatBtn{display:grid}
+#chatBar{left:50%;top:calc(62px + var(--sat));transform:translateX(-50%);z-index:4;width:min(440px,calc(100% - 32px));display:flex;gap:8px;pointer-events:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;box-sizing:border-box;margin:0}
+#chatText{flex:1;min-width:0;font-family:var(--f-body);font-weight:700;font-size:16px;padding:8px 10px;min-height:40px;box-sizing:border-box;background:var(--ink);color:var(--signal);border:1px solid var(--line);border-radius:4px;
+  -webkit-user-select:text;user-select:text}
+#chatText:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
 #killLog i{font-style:normal;color:var(--steel);margin:0 6px}
 @keyframes klog{0%{opacity:0;transform:translateX(-8px)}4%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
 #vsNote{margin:0;font-size:12px;line-height:1.6;color:var(--steel)}
@@ -214,6 +223,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
   <div id="topRight">
     <div id="scoreBox"><div class="label">得点</div><div id="score" class="data">0</div></div>
     <canvas id="radar" width="168" height="168"></canvas>
+    <button id="chatBtn" aria-label="チャット">会話</button>
     <button id="pauseBtn" aria-label="一時停止"><i></i></button>
   </div>
   <div id="cross"></div>
@@ -233,6 +243,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
     <button class="ghost solid" id="layDone">完了</button>
   </div>
   <button id="fireBtn" aria-label="射撃">射撃</button>
+  <form id="chatBar" hidden><input id="chatText" maxlength="40" autocomplete="off" spellcheck="false" enterkeyhint="send" placeholder="メッセージ（40文字まで）" aria-label="メッセージ"><button class="ghost solid" id="chatSend">送信</button></form>
   <div id="pick" hidden><p id="pickTitle"></p><div id="pickList"></div><p id="pickNote"></p></div>
 </div>
 
@@ -272,7 +283,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
         <li><b>狙う</b>狙うボタンで構える。拡大して弾のばらつきが減る。SR はスコープ</li>
         <li><b>武器</b>武器ボタンで SMG・AR・SR・LMG・SG を切り替え。対戦では出撃のたびに一丁だけ選ぶ</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる</li>
-        <li><b>対戦</b>名前を入れて、同じページを開いた相手と撃ち合う。狙いの補正とオート射撃は無し。頭は1.4倍。3秒で復帰</li>
+        <li><b>対戦</b>名前を入れて、同じページを開いた相手と撃ち合う。狙いの補正とオート射撃は無し。頭は1.4倍。3秒で復帰。会話ボタン（パソコンは Enter か T）でチャット</li>
         <li id="pcHow"><b>パソコン</b>WASD で移動、クリックで射撃、右クリックで構える、1〜5・Q・ホイールで武器、スペースで跳ぶ、R で装填</li>
       </ul>
     </div>
@@ -789,7 +800,8 @@ addEventListener('mouseup', e => { if (e.button === 2) setAim(false); else mouse
 addEventListener('wheel', e => { if (state === 'play' && !pvp && swapT <= 0 && e.deltaY) setWeapon(wi + (e.deltaY > 0 ? 1 : -1)); }, { passive: true });
 addEventListener('mousemove', e => { if (state === 'play' && (locked || mouseFire)) turn(e.movementX || 0, e.movementY || 0); });
 document.addEventListener('pointerlockchange', () => { const was = locked; locked = document.pointerLockElement === layer; if (was && !locked && state === 'play') pause(); });
-addEventListener('keydown', e => { keys[e.code] = true; if (state === 'play') { if (e.code === 'KeyR') startReload(); if (e.code === 'KeyQ' && !pvp) setWeapon(wi + 1); if (/^Digit[1-5]$/.test(e.code)) (pvp ? pickWeapon : setWeapon)(+e.code[5] - 1); if (e.code === 'Escape' || e.code === 'KeyP') pause(); if (e.code === 'Space') e.preventDefault(); } });
+addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT') return; // typing a name or a message is not game input
+  keys[e.code] = true; if (state === 'play') { if (pvp && (e.code === 'Enter' || e.code === 'KeyT')) { e.preventDefault(); chatOpen(); return; } if (e.code === 'KeyR') startReload(); if (e.code === 'KeyQ' && !pvp) setWeapon(wi + 1); if (/^Digit[1-5]$/.test(e.code)) (pvp ? pickWeapon : setWeapon)(+e.code[5] - 1); if (e.code === 'Escape' || e.code === 'KeyP') pause(); if (e.code === 'Space') e.preventDefault(); } });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseFire = false; });
 for (const ev of ['contextmenu', 'gesturestart', 'dblclick']) document.addEventListener(ev, e => e.preventDefault());
@@ -809,7 +821,7 @@ function show(mode) {
   if (mode === 'over') { $('eyebrow').textContent = score >= best && score > 0 ? '自己最高を更新' : '夜勤警備 ／ 9番バース'; $('heading').textContent = '勤務終了'; $('lead').hidden = true; $('stats').hidden = false;
     $('stScore').textContent = score; $('stWave').textContent = `第${wave}波`; $('stBest').textContent = best; $('go').textContent = 'もう一度'; }
 }
-function pause() { if (state !== 'play') return; if (document.pointerLockElement) document.exitPointerLock(); firing = mouseFire = false; show('pause'); if (pvp) vsSend(0); }
+function pause() { if (state !== 'play') return; chatClose(); if (document.pointerLockElement) document.exitPointerLock(); firing = mouseFire = false; show('pause'); if (pvp) vsSend(0); }
 function gameOver() { if (score > best) { best = score; store.set('best', best); } if (document.pointerLockElement) document.exitPointerLock(); firing = mouseFire = false; sfx.boom(); show('over'); }
 $('go').addEventListener('click', () => {
   audioInit();
@@ -826,7 +838,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 const VS = [['橙', '#ff8a3d'], ['青緑', '#27d3b8'], ['桃', '#ff5fa2'], ['黄', '#ffe14d'], ['青', '#4d9bff'], ['白', '#f2f5f0']];
 const SPAWNS = [[-26, -26], [26, 26], [-26, 26], [26, -26], [8, -27], [-12, 27], [-27, 8], [27, 0]];
 let room = null, myPeer = null;
-const net = { c: -1, d: 0, k: 0, lk: null, f: 0, dm: {}, seen: {}, dead: 0, pick: false, sendT: 0 }; // pick: waiting for the first weapon choice
+const net = { c: -1, d: 0, k: 0, lk: null, f: 0, dm: {}, seen: {}, dead: 0, pick: false, sendT: 0, m: [], mi: 0 }; // m: my last few chat lines as [id, text], resent with every state so a dropped packet loses nothing // pick: waiting for the first weapon choice
 // One weapon per life: chosen before the first spawn, and again while waiting to come back.
 const pickEl = $('pick'); let pickI = 1;
 const pickBtns = WEAPONS.map((w, i) => {
@@ -843,7 +855,8 @@ function pickWeapon(i) {
 }
 const remotes = new Map();
 // Names are typed by players and shown on other people's screens: strip control and direction-override characters, cap the length, and only ever insert as text.
-const cleanName = v => Array.from(String(typeof v === 'string' ? v : '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/g, '').trim()).slice(0, 10).join('');
+const cleanText = (v, n) => Array.from(String(typeof v === 'string' ? v : '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/g, '').trim()).slice(0, n).join('');
+const cleanName = v => cleanText(v, 10);
 const nameInput = $('playerName'); let myName = cleanName(store.get('name', '')); nameInput.value = myName;
 nameInput.addEventListener('input', () => nameInput.classList.remove('need'));
 function needName() { // versus cannot start without a name
@@ -859,6 +872,25 @@ function killLog(kn, kc, vn, vc) {
   setTimeout(() => row.remove(), 6000);
 }
 const myCol = () => VS[Math.max(0, net.c)][1];
+function chatRow(name, col, text) {
+  const row = document.createElement('div'), a = document.createElement('span'), b = document.createElement('span');
+  row.className = 'say'; a.textContent = name + '：'; a.style.color = col; b.textContent = text; row.append(a, b);
+  killLogEl.append(row); while (killLogEl.children.length > 5) killLogEl.firstChild.remove();
+  setTimeout(() => row.remove(), 9000);
+}
+const chatBar = $('chatBar'), chatText = $('chatText'); let chatAt = 0;
+function chatOpen() { if (!pvp || state !== 'play') return; for (const k in keys) keys[k] = false; firing = mouseFire = false; chatBar.hidden = false; chatText.value = ''; chatText.focus(); }
+function chatClose() { if (chatBar.hidden) return; chatBar.hidden = true; chatText.blur(); }
+chatBar.addEventListener('submit', e => {
+  e.preventDefault(); const t = cleanText(chatText.value, 40);
+  if (t) { if (performance.now() - chatAt < 1000) return; // one line a second
+    chatAt = performance.now(); net.m.push([++net.mi, t]); if (net.m.length > 3) net.m.shift(); net.sendT = 0; chatRow(myName, myCol(), t); }
+  chatClose();
+});
+chatText.addEventListener('keydown', e => { if (e.code === 'Escape') chatClose(); });
+chatText.addEventListener('blur', () => setTimeout(chatClose, 0));
+$('chatSend').addEventListener('pointerdown', e => e.preventDefault()); // keep the field focused so the tap submits instead of closing it
+$('chatBtn').addEventListener('click', () => { if (chatBar.hidden) chatOpen(); else chatClose(); });
 const num = v => typeof v === 'number' && isFinite(v) ? v : 0, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const RG = { vest: new THREE.BoxGeometry(0.56, 0.7, 0.32), legs: new THREE.BoxGeometry(0.44, 0.78, 0.26), head: new THREE.SphereGeometry(0.2, 10, 8), gun: new THREE.BoxGeometry(0.08, 0.1, 0.6) };
 function mkRemote(peer) {
@@ -866,11 +898,11 @@ function mkRemote(peer) {
   mk(RG.vest, mat, 0, 1.12, 0, g); mk(RG.legs, darkMat, 0, 0.39, 0, g); mk(RG.head, mat, 0, 1.66, 0, g); mk(RG.gun, darkMat, 0.22, 1.2, -0.4, g);
   const lamp = glow(0xffffff, 0.9); lamp.position.set(0, 1.95, 0); g.add(lamp);
   g.visible = false; scene.add(g);
-  return { peer, g, mat, lamp, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0, pitch: 0, py: 0, tpy: 0, y: 1.25, r: 0.6, alive: false, c: -1, name: '', f: 0, d: 0, k: 0, lastShot: -9, fresh: true };
+  return { peer, g, mat, lamp, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0, pitch: 0, py: 0, tpy: 0, y: 1.25, r: 0.6, alive: false, c: -1, name: '', mid: 0, chatAt: 0, f: 0, d: 0, k: 0, lastShot: -9, fresh: true };
 }
 function vsSend(a) {
   if (!room) return;
-  room.presence({ pv: 1, n: myName, x: +P.x.toFixed(2), z: +P.z.toFixed(2), y: +P.y.toFixed(2), yaw: +P.yaw.toFixed(3), pt: +P.pitch.toFixed(3), a, c: net.c, d: net.d, lk: net.lk, k: net.k, f: net.f, dm: Object.assign({}, net.dm) }).catch(() => {});
+  room.presence({ pv: 1, n: myName, m: net.m.slice(), x: +P.x.toFixed(2), z: +P.z.toFixed(2), y: +P.y.toFixed(2), yaw: +P.yaw.toFixed(3), pt: +P.pitch.toFixed(3), a, c: net.c, d: net.d, lk: net.lk, k: net.k, f: net.f, dm: Object.assign({}, net.dm) }).catch(() => {});
 }
 function vsRespawn() {
   let best = SPAWNS[Math.random() * SPAWNS.length | 0], bestD = -1;
@@ -900,6 +932,11 @@ function vsSync(dt, immune) { // immune: catch up on the room without taking dam
     const c = Math.abs(num(s.c) | 0) % VS.length; used.add(c);
     if (c !== r.c) { r.c = c; r.mat.color.set(VS[c][1]); r.lamp.material.color.set(VS[c][1]); }
     r.name = cleanName(s.n) || VS[c][0]; // a page that sends no name falls back to its colour
+    if (Array.isArray(s.m)) for (const e of s.m.slice(-3)) { // chat: show each line once; lines from before we met, or from a break, are skipped
+      if (!Array.isArray(e)) continue; const id = num(e[0]) | 0; if (id <= r.mid) continue; r.mid = id;
+      const t = cleanText(e[1], 40), now = performance.now();
+      if (t && !r.fresh && !immune && now - r.chatAt > 700) { r.chatAt = now; chatRow(r.name, VS[c][1], t); tone('sine', 880, 1100, 0.06, 0.06); }
+    }
     const k = r.fresh ? 1 : Math.min(1, dt * 12); r.fresh = false;
     r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.py += (r.tpy - r.py) * k; r.y = r.py + 1.25; const da = r.tyaw - r.yaw; r.yaw += Math.atan2(Math.sin(da), Math.cos(da)) * k;
     r.g.visible = r.alive; r.g.position.set(r.x, r.py, r.z); r.g.rotation.y = r.yaw;
@@ -933,7 +970,7 @@ function vsRanking() {
 function vsLeave() {
   if (room) room.presence({ pv: null }).catch(() => {});
   for (const r of remotes.values()) { scene.remove(r.g); r.mat.dispose(); r.lamp.material.dispose(); }
-  remotes.clear(); liveRemotes.length = 0; killLogEl.textContent = ''; pvp = false; net.pick = false; pickEl.hidden = true; if (standalone && room) vsNote.textContent = `部屋 ${room.code} に接続しました。同じコードを入れた人が相手になります。`; show('menu');
+  remotes.clear(); liveRemotes.length = 0; killLogEl.textContent = ''; chatClose(); pvp = false; net.pick = false; pickEl.hidden = true; if (standalone && room) vsNote.textContent = `部屋 ${room.code} に接続しました。同じコードを入れた人が相手になります。`; show('menu');
 }
 const vsBtn = $('vsBtn'), vsNote = $('vsNote');
 function vsStart() {
