@@ -94,25 +94,28 @@ body{background:var(--night);color:var(--signal);font-family:var(--f-body);overf
 #fireBtn.down{background:rgba(255,179,71,.45)}
 #reloadBtn{right:calc(var(--sar) + 108px);bottom:calc(22px + var(--sab));width:calc(58px*var(--bs));height:calc(58px*var(--bs));
   background:var(--panel);border:1px solid var(--line);font-size:12px}
-#stick{left:0;top:0;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;border:2px solid var(--line);
-  background:rgba(238,242,234,.05);opacity:.55}
-#stick i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(238,242,234,.5)}
-#stick.idle{left:calc(var(--sal) + 70px);top:auto;bottom:calc(84px + var(--sab));margin:0 0 -56px -56px;opacity:.28}
+#stick{left:calc(var(--sal) + 70px);bottom:calc(84px + var(--sab));width:calc(112px*var(--bs));height:calc(112px*var(--bs));
+  margin:0 0 calc(-56px*var(--bs)) calc(-56px*var(--bs));border-radius:50%;border:2px solid var(--line);
+  background:rgba(238,242,234,.05);opacity:.55;touch-action:none}
+#stick i{position:absolute;inset:29.5%;border-radius:50%;background:rgba(238,242,234,.5)}
+#stick.idle{opacity:.28}
 #jumpBtn{right:calc(var(--sar) + 104px);bottom:calc(92px + var(--sab));width:calc(64px*var(--bs));height:calc(64px*var(--bs));
   background:var(--panel);border:1px solid var(--hull);font-size:12px}
 #jumpBtn.down{background:rgba(39,163,148,.4)}
-#hud .placed{right:auto;bottom:auto;transform:translate(-50%,-50%)}
-body.lefty #stick.idle{left:auto;right:calc(var(--sar) + 70px);margin:0 -56px -56px 0}
+#hud .placed{right:auto;bottom:auto;margin:0;transform:translate(-50%,-50%)}
 body:not(.touch) #stick,body:not(.touch) #reloadBtn,body:not(.touch) #fireBtn,body:not(.touch) #jumpBtn{display:none}
-#editBar{left:50%;top:calc(12px + var(--sat));transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);display:none;pointer-events:auto;
+#editBar{left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;width:max-content;max-width:min(440px,calc(100% - 32px));display:none;pointer-events:auto;
   background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center;font-size:13px;font-weight:700}
 #editBar p{margin:0;flex-basis:100%;text-align:center}
 .ghost{font-family:var(--f-body);font-weight:700;font-size:13px;padding:8px 14px;min-height:40px;border-radius:4px;background:none;border:1px solid var(--line);color:var(--signal);cursor:pointer}
 .ghost.solid{background:var(--sodium);border-color:var(--sodium);color:var(--ink)}
 body.editing #editBar{display:flex}
 body.editing #vitals,body.editing #topRight,body.editing #cross,body.editing #announce,body.editing #ammoBox{visibility:hidden}
-body.editing #fireBtn,body.editing #reloadBtn,body.editing #jumpBtn{display:grid;outline:2px dashed var(--signal);outline-offset:4px;cursor:grab}
-body.editing #stick{display:block}
+body.editing #fireBtn,body.editing #reloadBtn,body.editing #jumpBtn{display:grid;outline:2px dashed var(--signal);outline-offset:4px;cursor:grab;z-index:2}
+body.editing #stick{display:block;pointer-events:auto;opacity:.8;outline:2px dashed var(--signal);outline-offset:4px;cursor:grab;z-index:2}
+body.editing #hud .sel{outline:3px solid var(--sodium)}
+#sizeRow{display:flex;align-items:center;gap:10px;flex-basis:100%;justify-content:center}
+#sizeRange{width:min(52vw,220px);accent-color:var(--sodium);touch-action:none}
 body:not(.touch) #ammoBox{bottom:calc(20px + var(--sab))}
 body:not(.playing):not(.editing) #hud{visibility:hidden}
 body.touch #pcHow{display:none}
@@ -185,8 +188,8 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
   <button id="reloadBtn" aria-label="リロード">装填</button>
   <button id="jumpBtn" aria-label="ジャンプ">跳ぶ</button>
   <div id="editBar">
-    <p>ボタンをドラッグして好きな位置へ</p>
-    <div class="seg" id="sizeSeg"><button id="size0" data-v="0">小</button><button id="size1" data-v="1">中</button><button id="size2" data-v="2">大</button></div>
+    <p>ドラッグで移動。触れたものの大きさを変更</p>
+    <div id="sizeRow"><label id="sizeLbl" for="sizeRange">射撃の大きさ</label><input type="range" id="sizeRange" min="0.6" max="2" step="0.05" value="1"></div>
     <button class="ghost" id="layFlip">左右を入れ替え</button>
     <button class="ghost" id="layReset">初期配置</button>
     <button class="ghost solid" id="layDone">完了</button>
@@ -223,8 +226,8 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
       <button id="quitBtn" hidden>タイトルへ戻る</button>
       <p id="vsNote">対戦の接続を確認しています。</p>
       <ul id="how">
-        <li><b>左親指</b>画面左をドラッグして移動</li>
-        <li><b>右親指</b>画面右をドラッグして視点</li>
+        <li><b>移動</b>画面左をドラッグ。スティックを配置したときはその上から</li>
+        <li><b>視点</b>それ以外の場所をドラッグ</li>
         <li><b>射撃</b>ボタン長押し。押したまま狙いも動かせる</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる</li>
         <li><b>対戦</b>同じページを開いた相手と撃ち合う。狙いの補正とオート射撃は無し。3秒で復帰</li>
@@ -620,27 +623,29 @@ let touchMode = matchMedia('(pointer: coarse)').matches;
 const setTouch = () => { if (!touchMode) { touchMode = true; } document.body.classList.add('touch'); };
 if (touchMode) setTouch();
 const layer = $('touch'), stick = $('stick'), knob = stick.firstElementChild, fireBtn = $('fireBtn');
-const joy = { id: null, bx: 0, by: 0, x: 0, y: 0 }, look = { id: null, x: 0, y: 0 }, fb = { id: null, x: 0, y: 0 };
-let firing = false, mouseFire = false, jumpHeld = false, jumpQ = 0, moveRight = false; const keys = {};
+const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, R: 48 }, look = { id: null, x: 0, y: 0 }, fb = { id: null, x: 0, y: 0 };
+let firing = false, mouseFire = false, jumpHeld = false, jumpQ = 0; const keys = {};
 const turn = (dx, dy) => { const s = SENS[cfg.sens]; P.yaw -= dx * s; P.pitch = Math.max(-1.2, Math.min(1.2, P.pitch - dy * s)); };
 layer.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse' || state !== 'play') return;
   setTouch(); e.preventDefault();
-  if (joy.id === null && (moveRight ? e.clientX > innerWidth * 0.55 : e.clientX < innerWidth * 0.45)) {
-    joy.id = e.pointerId; joy.bx = e.clientX; joy.by = e.clientY; joy.x = joy.y = 0;
-    stick.classList.remove('idle'); stick.style.left = e.clientX + 'px'; stick.style.top = e.clientY + 'px'; knob.style.transform = '';
+  // a stick the player has placed is grabbed on or near itself; an unplaced one floats anywhere on the left
+  const sr = stick.getBoundingClientRect(), onStick = Array.isArray(lay.stick) ? Math.hypot(e.clientX - sr.left - sr.width / 2, e.clientY - sr.top - sr.height / 2) < sr.width * 0.75 : e.clientX < innerWidth * 0.45;
+  if (joy.id === null && onStick) {
+    joy.id = e.pointerId; joy.bx = e.clientX; joy.by = e.clientY; joy.x = joy.y = 0; joy.R = sr.width * 0.43;
+    stick.classList.remove('idle'); stick.classList.add('placed'); stick.style.left = e.clientX + 'px'; stick.style.top = e.clientY + 'px'; knob.style.transform = '';
   } else if (look.id === null) { look.id = e.pointerId; look.x = e.clientX; look.y = e.clientY; }
   try { layer.setPointerCapture(e.pointerId); } catch (_) {}
 });
 layer.addEventListener('pointermove', e => {
   if (e.pointerId === joy.id) {
-    let dx = e.clientX - joy.bx, dy = e.clientY - joy.by; const L = Math.hypot(dx, dy), R = 48;
+    let dx = e.clientX - joy.bx, dy = e.clientY - joy.by; const L = Math.hypot(dx, dy), R = joy.R;
     if (L > R) { dx *= R / L; dy *= R / L; }
     knob.style.transform = `translate(${dx}px,${dy}px)`; joy.x = dx / R; joy.y = dy / R;
   } else if (e.pointerId === look.id) { turn(e.clientX - look.x, e.clientY - look.y); look.x = e.clientX; look.y = e.clientY; }
 });
 const endTouch = e => {
-  if (e.pointerId === joy.id) { joy.id = null; joy.x = joy.y = 0; stick.classList.add('idle'); stick.style.left = stick.style.top = ''; knob.style.transform = ''; }
+  if (e.pointerId === joy.id) { joy.id = null; joy.x = joy.y = 0; stick.classList.add('idle'); knob.style.transform = ''; applyLayout(); }
   if (e.pointerId === look.id) look.id = null;
 };
 layer.addEventListener('pointerup', endTouch); layer.addEventListener('pointercancel', endTouch);
@@ -655,27 +660,46 @@ const endJump = () => { jumpHeld = false; jumpBtn.classList.remove('down'); };
 jumpBtn.addEventListener('pointerup', endJump); jumpBtn.addEventListener('pointercancel', endJump);
 
 /* ---------- button layout ---------- */
-const BTN = { fire: fireBtn, reload: $('reloadBtn'), jump: jumpBtn };
-let lay = store.get('lay', {}), editFrom = 'menu';
+const BTN = { fire: fireBtn, reload: $('reloadBtn'), jump: jumpBtn, stick }, BNAME = { fire: '射撃', reload: '装填', jump: '跳ぶ', stick: '移動スティック' };
+let lay = store.get('lay', {}), sz = store.get('sz', {}), sel = 'fire', editFrom = 'menu';
 if (!lay || typeof lay !== 'object') lay = {};
+if (!sz || typeof sz !== 'object') sz = {};
+const sizeRange = $('sizeRange');
+const scaleOf = k => { const v = +sz[k]; return v >= 0.6 && v <= 2 ? v : [0.82, 1, 1.22][cfg.bsize] || 1; }; // the old one-size-for-all setting is the fallback
+const fit = (el, p) => { const hx = el.offsetWidth / 2 / innerWidth, hy = el.offsetHeight / 2 / innerHeight; // any spot, as long as the whole control stays on screen
+  return [Math.max(hx, Math.min(1 - hx, p[0])), Math.max(hy, Math.min(1 - hy, p[1]))]; };
 function applyLayout() {
-  document.documentElement.style.setProperty('--bs', [0.82, 1, 1.22][cfg.bsize] || 1);
-  for (const k in BTN) { const el = BTN[k], p = Array.isArray(lay[k]) ? lay[k] : null; el.classList.toggle('placed', !!p); el.style.left = p ? p[0] * 100 + '%' : ''; el.style.top = p ? p[1] * 100 + '%' : ''; }
-  moveRight = Array.isArray(lay.fire) && lay.fire[0] < 0.5; document.body.classList.toggle('lefty', moveRight); // the stick takes the side the fire button is not on
+  for (const k in BTN) {
+    const el = BTN[k]; el.style.setProperty('--bs', scaleOf(k)); el.classList.toggle('sel', k === sel);
+    if (k === 'stick' && joy.id !== null) continue; // in use: it sits under the thumb until released
+    const p = Array.isArray(lay[k]) ? fit(el, lay[k]) : null; el.classList.toggle('placed', !!p); el.style.left = p ? p[0] * 100 + '%' : ''; el.style.top = p ? p[1] * 100 + '%' : '';
+  }
+  sizeRange.value = scaleOf(sel); $('sizeLbl').textContent = `${BNAME[sel]}の大きさ ${Math.round(scaleOf(sel) * 100)}%`;
+}
+function placeBar() { // keep the panel off the controls: centre if free, else top, else bottom
+  const bar = $('editBar'), h = bar.offsetHeight, w = bar.offsetWidth, x0 = (innerWidth - w) / 2;
+  for (const cy of [innerHeight / 2, h / 2 + 8, innerHeight - h / 2 - 8, innerHeight / 2]) {
+    bar.style.top = cy + 'px'; let clear = true;
+    for (const k in BTN) { const r = BTN[k].getBoundingClientRect(); if (r.right > x0 && r.left < x0 + w && r.bottom > cy - h / 2 && r.top < cy + h / 2) clear = false; }
+    if (clear) break;
+  }
 }
 const centre = el => { const r = el.getBoundingClientRect(); return [(r.left + r.width / 2) / innerWidth, (r.top + r.height / 2) / innerHeight]; };
 for (const k in BTN) {
   const el = BTN[k]; let id = null;
-  el.addEventListener('pointerdown', e => { if (state !== 'edit') return; id = e.pointerId; try { el.setPointerCapture(id); } catch (_) {} });
-  el.addEventListener('pointermove', e => { if (state !== 'edit' || e.pointerId !== id) return;
-    lay[k] = [Math.max(0.07, Math.min(0.93, e.clientX / innerWidth)), Math.max(0.1, Math.min(0.92, e.clientY / innerHeight))]; applyLayout(); });
-  const up = e => { if (e.pointerId !== id) return; id = null; store.set('lay', lay); };
+  el.addEventListener('pointerdown', e => { if (state !== 'edit') return; e.preventDefault(); id = e.pointerId; sel = k; applyLayout(); try { el.setPointerCapture(id); } catch (_) {} });
+  el.addEventListener('pointermove', e => { if (state !== 'edit' || e.pointerId !== id) return; lay[k] = fit(el, [e.clientX / innerWidth, e.clientY / innerHeight]); applyLayout(); });
+  const up = e => { if (e.pointerId !== id) return; id = null; store.set('lay', lay); placeBar(); };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
 }
-bindSeg('sizeSeg', 'bsize', applyLayout); applyLayout();
-$('layBtn').addEventListener('click', () => { editFrom = state; state = 'edit'; overlay.hidden = true; document.body.classList.add('editing'); });
-$('layFlip').addEventListener('click', () => { const next = {}; for (const k in BTN) { const p = centre(BTN[k]); next[k] = [1 - p[0], p[1]]; } lay = next; store.set('lay', lay); applyLayout(); });
-$('layReset').addEventListener('click', () => { lay = {}; store.set('lay', lay); applyLayout(); });
+sizeRange.addEventListener('input', () => { sz[sel] = +sizeRange.value; store.set('sz', sz); applyLayout(); });
+sizeRange.addEventListener('change', placeBar); // once the slider is let go, not while it is under the finger
+applyLayout(); addEventListener('resize', applyLayout);
+// layouts saved before the stick could be placed: it used to follow the side opposite the fire button, so keep it there
+if (Array.isArray(lay.fire) && lay.fire[0] < 0.5 && !Array.isArray(lay.stick) && stick.offsetWidth) { const p = centre(stick); lay.stick = [1 - p[0], p[1]]; store.set('lay', lay); applyLayout(); }
+$('layBtn').addEventListener('click', () => { editFrom = state; state = 'edit'; overlay.hidden = true; document.body.classList.add('editing'); applyLayout(); placeBar(); });
+$('layFlip').addEventListener('click', () => { const next = {}; for (const k in BTN) { const p = centre(BTN[k]); next[k] = [1 - p[0], p[1]]; } lay = next; store.set('lay', lay); applyLayout(); placeBar(); });
+$('layReset').addEventListener('click', () => { lay = {}; sz = {}; cfg.bsize = 1; store.set('lay', lay); store.set('sz', sz); store.set('bsize', 1); applyLayout(); placeBar(); });
 $('layDone').addEventListener('click', () => show(editFrom));
 // mouse + keyboard
 let locked = false;
