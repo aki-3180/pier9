@@ -133,6 +133,7 @@ body.editing #hud .sel{outline:3px solid var(--sodium)}
 body:not(.touch) #ammoBox{bottom:calc(20px + var(--sab))}
 body:not(.playing):not(.editing) #hud{visibility:hidden}
 body.touch #pcHow{display:none}
+body:not(.touch) #fdragRow{display:none}
 #vsBtn,#quitBtn{font-family:var(--f-body);font-weight:700;font-size:15px;letter-spacing:.08em;padding:12px 16px;min-height:48px;border-radius:4px;background:none;border:1px solid var(--sodium);color:var(--sodium);cursor:pointer}
 #vsBtn:disabled{border-color:var(--line);color:var(--steel);cursor:default}
 #quitBtn{border-color:var(--line);color:var(--signal)}
@@ -269,6 +270,8 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
         <div class="opt"><span>視点の感度</span>
           <div class="seg" id="sensSeg"><button id="sens0" data-v="0">低</button><button id="sens1" data-v="1">中</button><button id="sens2" data-v="2">高</button><button id="sens3" data-v="3">速</button><button id="sens4" data-v="4">最速</button></div></div>
         <div class="opt"><span>ボタン配置</span><button class="ghost" id="layBtn">変更する</button></div>
+        <div class="opt" id="fdragRow"><span>射撃中の視点操作</span>
+          <div class="seg" id="fdragSeg"><button id="fdrag1" data-v="1">入</button><button id="fdrag0" data-v="0">切</button></div></div>
         <div class="opt"><span>オート射撃</span>
           <div class="seg" id="autoSeg"><button id="auto1" data-v="1">入</button><button id="auto0" data-v="0">切</button></div></div>
         <div class="opt"><span>効果音</span>
@@ -284,7 +287,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
       <ul id="how">
         <li><b>移動</b>画面左をドラッグ。スティックを配置したときはその上から</li>
         <li><b>視点</b>それ以外の場所をドラッグ</li>
-        <li><b>射撃</b>ボタン長押し。押したまま狙いも動かせる</li>
+        <li><b>射撃</b>ボタン長押し。押したまま狙いも動かせる（設定の「射撃中の視点操作」で切れる）</li>
         <li><b>狙う</b>狙うボタンで構える。拡大して弾のばらつきが減る。SR はスコープ、ほかはドットサイトを覗く</li>
         <li><b>武器</b>武器ボタンで SMG・AR・SR・LMG・SG を切り替え。対戦では出撃のたびに一丁だけ選ぶ</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる。倉庫街の階段は歩くだけで上がれる</li>
@@ -320,7 +323,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('pier9.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('pier9.' + k, JSON.stringify(v)); } catch (e) {} }
 };
-const cfg = { sens: store.get('sens', 1), auto: store.get('auto', 1), snd: store.get('snd', 1), bsize: store.get('bsize', 1), map: store.get('map', 1) };
+const cfg = { sens: store.get('sens', 1), auto: store.get('auto', 1), snd: store.get('snd', 1), fdrag: store.get('fdrag', 1), bsize: store.get('bsize', 1), map: store.get('map', 1) };
 let best = 0;
 const SENS = [0.0028, 0.0044, 0.0066, 0.0095, 0.0135];
 function bindSeg(id, key, after) {
@@ -329,7 +332,7 @@ function bindSeg(id, key, after) {
   seg.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; cfg[key] = +b.dataset.v; store.set(key, cfg[key]); paint(); if (after) after(); });
   paint(); return paint;
 }
-bindSeg('sensSeg', 'sens'); bindSeg('autoSeg', 'auto'); bindSeg('sndSeg', 'snd');
+bindSeg('sensSeg', 'sens'); bindSeg('autoSeg', 'auto'); bindSeg('sndSeg', 'snd'); bindSeg('fdragSeg', 'fdrag');
 
 /* ---------- audio ---------- */
 let ac = null, noiseBuf = null;
@@ -1042,7 +1045,7 @@ const endTouch = e => {
 };
 layer.addEventListener('pointerup', endTouch); layer.addEventListener('pointercancel', endTouch);
 fireBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state !== 'play') return; fb.id = e.pointerId; fb.x = e.clientX; fb.y = e.clientY; firing = true; fireBtn.classList.add('down'); try { fireBtn.setPointerCapture(e.pointerId); } catch (_) {} });
-fireBtn.addEventListener('pointermove', e => { if (e.pointerId !== fb.id) return; turn(e.clientX - fb.x, e.clientY - fb.y); fb.x = e.clientX; fb.y = e.clientY; });
+fireBtn.addEventListener('pointermove', e => { if (e.pointerId !== fb.id) return; if (cfg.fdrag) turn(e.clientX - fb.x, e.clientY - fb.y); fb.x = e.clientX; fb.y = e.clientY; });
 const endFire = e => { if (e.pointerId !== fb.id) return; fb.id = null; firing = false; fireBtn.classList.remove('down'); };
 fireBtn.addEventListener('pointerup', endFire); fireBtn.addEventListener('pointercancel', endFire);
 $('reloadBtn').addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play') startReload(); });
