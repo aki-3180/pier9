@@ -119,6 +119,11 @@ body.touch #pcHow{display:none}
 #vsBtn,#quitBtn{font-family:var(--f-body);font-weight:700;font-size:15px;letter-spacing:.08em;padding:12px 16px;min-height:48px;border-radius:4px;background:none;border:1px solid var(--sodium);color:var(--sodium);cursor:pointer}
 #vsBtn:disabled{border-color:var(--line);color:var(--steel);cursor:default}
 #quitBtn{border-color:var(--line);color:var(--signal)}
+#roomRow label{white-space:nowrap}
+.roomCtl{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#roomCode{width:7.5em;font-family:var(--f-data);font-size:16px;padding:8px 10px;min-height:40px;background:var(--ink);color:var(--signal);border:1px solid var(--line);border-radius:4px;
+  text-transform:uppercase;letter-spacing:.14em;-webkit-user-select:text;user-select:text}
+#roomCode:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
 #vsNote{margin:0;font-size:12px;line-height:1.6;color:var(--steel)}
 #vsRow{display:none;gap:10px;align-items:baseline;font-size:13px;font-weight:700;flex-wrap:wrap}
 #vsRow b{font-family:var(--f-data);font-size:15px;color:var(--sodium)}
@@ -212,6 +217,8 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
           <div class="seg" id="sndSeg"><button id="snd1" data-v="1">入</button><button id="snd0" data-v="0">切</button></div></div>
       </div>
       <button id="go">勤務開始</button>
+      <div class="opt" id="roomRow" hidden><label for="roomCode">部屋コード</label>
+        <span class="roomCtl"><input id="roomCode" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="ghost" id="roomCopy">招待リンクをコピー</button></span></div>
       <button id="vsBtn" disabled>オンライン対戦</button>
       <button id="quitBtn" hidden>タイトルへ戻る</button>
       <p id="vsNote">対戦の接続を確認しています。</p>
@@ -228,6 +235,8 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script>
 (() => {
 'use strict';
@@ -674,7 +683,7 @@ let wakeLock = null;
 const LEAD = $('lead').textContent;
 function show(mode) {
   state = mode; document.body.classList.remove('editing'); document.body.classList.toggle('playing', mode === 'play'); document.body.classList.toggle('vs', pvp); overlay.hidden = mode === 'play';
-  $('vsBtn').hidden = $('vsNote').hidden = mode !== 'menu'; $('quitBtn').hidden = mode === 'menu' || mode === 'play';
+  $('vsBtn').hidden = $('vsNote').hidden = mode !== 'menu'; $('roomRow').hidden = mode !== 'menu' || !standalone; $('quitBtn').hidden = mode === 'menu' || mode === 'play';
   $('quitBtn').textContent = pvp ? '対戦をやめる' : 'タイトルへ戻る';
   if (mode === 'menu') { $('eyebrow').textContent = '夜勤警備 ／ 9番バース'; $('heading').innerHTML = '第九<span>埠頭</span>'; $('lead').hidden = false; $('lead').textContent = LEAD; $('stats').hidden = true; $('go').textContent = '勤務開始'; }
   if (mode === 'pause') { $('eyebrow').textContent = pvp ? `撃破 ${net.k} ／ 被撃破 ${net.d}` : `第${wave}波 ／ 得点 ${score}`; $('heading').textContent = pvp ? '離席中' : '一時停止';
@@ -771,15 +780,77 @@ function vsLeave() {
   remotes.clear(); liveRemotes.length = 0; pvp = false; show('menu');
 }
 const vsBtn = $('vsBtn'), vsNote = $('vsNote');
-vsBtn.addEventListener('click', () => {
+function vsStart() {
   if (!room) return;
   audioInit(); clearField(); pvp = true; net.k = net.d = 0; net.lk = null; net.c = -1; net.dead = 0; net.sendT = 0; score = 0; fireCd = 0;
   vsSync(0, true); vsRespawn(); show('play'); announce('対戦開始', remotes.size ? '相手を見つけて撃て' : '相手の参加を待っています'); sfx.wave();
   if (navigator.wakeLock && !wakeLock) navigator.wakeLock.request('screen').then(w => { wakeLock = w; w.addEventListener('release', () => { wakeLock = null; }); }).catch(() => {});
-});
+}
 $('quitBtn').addEventListener('click', () => { if (pvp) vsLeave(); else { clearField(); show('menu'); } });
 const vsOff = '対戦は、このページを共有した相手と claude.ai 上で同時に開いているときだけ使えます。';
-(window.claude && window.claude.use ? window.claude.use('room') : Promise.resolve(null)).then(r => {
+const NETCONF = window.PIER9_NET; // defined (by config.js) only in the self-hosted build
+
+/* Self-hosted transport: the same three calls the claude.ai room gives (peers / presence / onPeers),
+   carried as Supabase Realtime broadcasts. Every message is the sender's whole state, so a dropped one costs nothing. */
+let sbClient = null;
+function openChannel(conf, code) {
+  return new Promise((resolve, reject) => {
+    if (!sbClient) sbClient = window.supabase.createClient(conf.url, conf.key, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { params: { eventsPerSecond: 20 } } });
+    const me = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4), others = new Map(), hs = [];
+    let mine = {}, dirty = false, lastSend = 0, open = false, lastCount = -1;
+    const ch = sbClient.channel('pier9-' + code, { config: { broadcast: { self: false } } });
+    const push = () => { dirty = false; lastSend = performance.now(); try { const r = ch.send({ type: 'broadcast', event: 'st', payload: { p: me, s: mine } }); if (r && r.catch) r.catch(() => {}); } catch (_) {} };
+    ch.on('broadcast', { event: 'st' }, m => {
+      const d = m && m.payload; if (!d || typeof d.p !== 'string' || d.p === me || !d.s || typeof d.s !== 'object') return;
+      if (others.size < 16 || others.has(d.p)) others.set(d.p.slice(0, 24), { s: d.s, at: performance.now() });
+    });
+    const timer = setInterval(() => {
+      if (!open) return; const now = performance.now();
+      if ((dirty && now - lastSend > 80) || now - lastSend > 1000) push();
+      for (const [k, v] of others) if (now - v.at > 4000) others.delete(k); // silent for 4 s: gone
+      if (others.size !== lastCount) { lastCount = others.size; hs.forEach(h => h()); }
+    }, 40);
+    const api = {
+      code,
+      peers() { const out = [{ peer: me, isMe: true, sameTab: true, kind: 'viewer', presence: mine }]; for (const [k, v] of others) out.push({ peer: k, isMe: false, sameTab: false, kind: 'viewer', presence: v.s }); return out; },
+      presence(patch) { mine = Object.assign({}, mine, patch); for (const k in mine) if (mine[k] === null) delete mine[k]; dirty = true; if (patch.pv === null) push(); return Promise.resolve(); },
+      onPeers(h) { hs.push(h); return () => {}; },
+      close() { clearInterval(timer); try { sbClient.removeChannel(ch); } catch (_) {} }
+    };
+    const giveUp = setTimeout(() => { if (!open) { api.close(); reject(new Error('timeout')); } }, 9000);
+    ch.subscribe(status => {
+      if (status === 'SUBSCRIBED') { if (!open) { open = true; clearTimeout(giveUp); resolve(api); } }
+      else if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && !open) { clearTimeout(giveUp); api.close(); reject(new Error(status)); }
+    });
+  });
+}
+const standalone = NETCONF !== undefined, roomInput = $('roomCode');
+const cleanCode = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+const newCode = () => { let c = ''; for (let i = 0; i < 4; i++) c += 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.random() * 32 | 0]; return c; };
+function joinStandalone() {
+  const code = cleanCode(roomInput.value) || newCode(); roomInput.value = code;
+  try { history.replaceState(null, '', '#' + code); } catch (_) {}
+  if (room && room.code === code) { vsStart(); return; }
+  if (room) { room.close(); room = null; }
+  vsBtn.disabled = true; vsNote.textContent = `部屋 ${code} に接続しています。`;
+  openChannel(NETCONF, code).then(r => { room = r; vsBtn.disabled = false; vsNote.textContent = `部屋 ${code} に接続しました。同じコードを入れた人が相手になります。`; if (state === 'menu') vsStart(); })
+    .catch(() => { vsBtn.disabled = false; vsNote.textContent = '接続できませんでした。config.js の URL と公開キー、通信状況を確認してください。'; });
+}
+vsBtn.addEventListener('click', () => { audioInit(); if (standalone) joinStandalone(); else vsStart(); });
+if (standalone) {
+  if (!NETCONF || !NETCONF.url || !NETCONF.key) vsNote.textContent = '対戦は未設定です。config.js に Supabase の URL と公開キーを入れると使えます。';
+  else if (!window.supabase || !window.supabase.createClient) vsNote.textContent = '通信ライブラリを読み込めませんでした。通信状況を確認して、ページを開き直してください。';
+  else {
+    $('roomRow').hidden = false; roomInput.value = cleanCode(location.hash.slice(1)) || newCode(); vsBtn.disabled = false;
+    vsNote.textContent = '同じ部屋コードを入れた人同士で対戦します。招待リンクを送ると、相手はコード入力なしで同じ部屋に入れます。';
+    roomInput.addEventListener('change', () => { roomInput.value = cleanCode(roomInput.value) || newCode(); });
+    $('roomCopy').addEventListener('click', () => {
+      const code = cleanCode(roomInput.value) || newCode(); roomInput.value = code;
+      const url = location.origin + location.pathname + '#' + code;
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => { vsNote.textContent = '招待リンクをコピーしました。相手に送ってください。'; }, () => { vsNote.textContent = '招待リンク： ' + url; });
+    });
+  }
+} else (window.claude && window.claude.use ? window.claude.use('room') : Promise.resolve(null)).then(r => {
   if (!r) { vsNote.textContent = vsOff; return; }
   room = r; vsBtn.disabled = false;
   const paint = () => {
