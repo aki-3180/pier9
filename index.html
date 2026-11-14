@@ -144,6 +144,19 @@ body.touch #pcHow{display:none}
 #vsDot{width:10px;height:10px;border-radius:50%;align-self:center}
 body.vs #vsRow{display:flex}
 body.vs #waveRow,body.vs #scoreBox{display:none}
+body.vs:not(.editing) #swapBtn{display:none}
+#roomCode[readonly]{color:var(--sodium);border-color:var(--sodium)}
+#pick{left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:max-content;max-width:min(560px,calc(100% - 32px));pointer-events:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px;display:grid;gap:10px;text-align:center}
+#pick p{margin:0;font-size:13px;font-weight:700}
+#pickTitle{font-family:var(--f-display);font-size:18px!important;font-weight:400!important;letter-spacing:.08em}
+#pickNote{color:var(--steel)}
+#pickList{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+#pickList button{display:grid;gap:2px;min-width:96px;min-height:52px;padding:8px 10px;touch-action:manipulation}
+#pickList b{font-family:var(--f-data);font-size:16px}
+#pickList span{font-size:11px;color:var(--steel)}
+#pickList button[aria-pressed="true"]{background:var(--sodium);border-color:var(--sodium);color:var(--ink)}
+#pickList button[aria-pressed="true"] span{color:var(--ink)}
 
 /* overlay */
 #overlay{position:fixed;inset:0;overflow-y:auto;display:flex;
@@ -209,6 +222,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
     <button class="ghost solid" id="layDone">完了</button>
   </div>
   <button id="fireBtn" aria-label="射撃">射撃</button>
+  <div id="pick" hidden><p id="pickTitle"></p><div id="pickList"></div><p id="pickNote"></p></div>
 </div>
 
 <div id="overlay">
@@ -244,7 +258,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
         <li><b>視点</b>それ以外の場所をドラッグ</li>
         <li><b>射撃</b>ボタン長押し。押したまま狙いも動かせる</li>
         <li><b>狙う</b>狙うボタンで構える。拡大して弾のばらつきが減る。SR はスコープ</li>
-        <li><b>武器</b>武器ボタンで SMG・AR・SR・LMG・SG を切り替え</li>
+        <li><b>武器</b>武器ボタンで SMG・AR・SR・LMG・SG を切り替え。対戦では出撃のたびに一丁だけ選ぶ</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる</li>
         <li><b>対戦</b>同じページを開いた相手と撃ち合う。狙いの補正とオート射撃は無し。頭は1.4倍。3秒で復帰</li>
         <li id="pcHow"><b>パソコン</b>WASD で移動、クリックで射撃、右クリックで構える、1〜5・Q・ホイールで武器、スペースで跳ぶ、R で装填</li>
@@ -442,13 +456,13 @@ for (const cx of [-34, 30]) {
 gunScene.add(new THREE.HemisphereLight(0xb8c6e6, 0x40301c, 1.1));
 const gl = new THREE.DirectionalLight(0xffc880, 0.8); gl.position.set(-1, 2, 1); gunScene.add(gl);
 // dmg: per pellet against drones, pd: against rivals. fo: full damage out to r0, falling to the share m at r1.
-// sp: hip spread in radians, as: the share of it left when aiming. ar: how fast the aim comes up. model: body, barrel, barrel radius, magazine height and width, stock.
+// sp: hip spread in radians (the same against drones and rivals), as: the share of it left when aiming. ar: how fast the aim comes up. model: body, barrel, barrel radius, magazine height and width, stock.
 const WEAPONS = [
-  { name: 'SMG', mag: 36, cd: 0.065, dmg: 8, pd: 9, n: 1, sp: 0.034, as: 0.55, fo: [12, 30, 0.5], rl: 1.1, zoom: 1.25, ar: 12, mv: 1.08, kick: 0.7, snd: [0.06, 6500, 1200, 0.16, 280], model: [0.34, 0.12, 0.014, 0.18, 0.036, 0] },
-  { name: 'AR', mag: 30, cd: 0.105, dmg: 12, pd: 14, n: 1, sp: 0.014, as: 0.3, fo: [30, 70, 0.75], rl: 1.4, zoom: 1.5, ar: 9, mv: 1, kick: 1, snd: [0.09, 5200, 700, 0.22, 190], model: [0.42, 0.3, 0.014, 0.14, 0.04, 0.14] },
-  { name: 'SR', mag: 5, cd: 1.2, dmg: 130, pd: 72, n: 1, sp: 0.09, as: 0, fo: [999, 1000, 1], rl: 2.2, zoom: 4, ar: 4.5, mv: 0.95, kick: 3, scope: true, snd: [0.28, 3800, 200, 0.4, 120], model: [0.46, 0.5, 0.013, 0.08, 0.04, 0.2] },
-  { name: 'LMG', mag: 80, cd: 0.095, dmg: 12, pd: 13, n: 1, sp: 0.036, as: 0.45, fo: [30, 70, 0.7], rl: 3.4, zoom: 1.4, ar: 5, mv: 0.82, kick: 1.2, snd: [0.1, 4200, 500, 0.24, 150], model: [0.5, 0.34, 0.017, 0.1, 0.1, 0.16] },
-  { name: 'SG', mag: 6, cd: 0.8, dmg: 9, pd: 10, n: 8, sp: 0.075, as: 0.8, fo: [7, 20, 0.25], rl: 2, zoom: 1.2, ar: 9, mv: 1, kick: 2.4, snd: [0.22, 2600, 180, 0.42, 110], model: [0.4, 0.4, 0.021, 0, 0, 0.16] }
+  { name: 'SMG', tip: '連射最速・近距離', mag: 36, cd: 0.065, dmg: 8, pd: 9, n: 1, sp: 0.06, as: 0.55, fo: [12, 30, 0.5], rl: 1.1, zoom: 1.25, ar: 12, mv: 1.08, kick: 0.7, snd: [0.06, 6500, 1200, 0.16, 280], model: [0.34, 0.12, 0.014, 0.18, 0.036, 0] },
+  { name: 'AR', tip: '標準・中距離', mag: 30, cd: 0.105, dmg: 12, pd: 14, n: 1, sp: 0.028, as: 0.3, fo: [30, 70, 0.75], rl: 1.4, zoom: 1.5, ar: 9, mv: 1, kick: 1, snd: [0.09, 5200, 700, 0.22, 190], model: [0.42, 0.3, 0.014, 0.14, 0.04, 0.14] },
+  { name: 'SR', tip: '一発が重い・狙って撃つ', mag: 5, cd: 1.2, dmg: 130, pd: 72, n: 1, sp: 0.13, as: 0, fo: [999, 1000, 1], rl: 2.2, zoom: 4, ar: 4.5, mv: 0.95, kick: 3, scope: true, snd: [0.28, 3800, 200, 0.4, 120], model: [0.46, 0.5, 0.013, 0.08, 0.04, 0.2] },
+  { name: 'LMG', tip: '80発・足が遅い', mag: 80, cd: 0.095, dmg: 12, pd: 13, n: 1, sp: 0.064, as: 0.45, fo: [30, 70, 0.7], rl: 3.4, zoom: 1.4, ar: 5, mv: 0.82, kick: 1.2, snd: [0.1, 4200, 500, 0.24, 150], model: [0.5, 0.34, 0.017, 0.1, 0.1, 0.16] },
+  { name: 'SG', tip: '散弾・至近距離', mag: 6, cd: 0.8, dmg: 9, pd: 10, n: 8, sp: 0.12, as: 0.8, fo: [7, 20, 0.25], rl: 2, zoom: 1.2, ar: 9, mv: 1, kick: 2.4, snd: [0.22, 2600, 180, 0.42, 110], model: [0.4, 0.4, 0.021, 0, 0, 0.16] }
 ];
 const gun = new THREE.Group(); gun.scale.setScalar(0.8); gunScene.add(gun);
 const guns = WEAPONS.map(w => {
@@ -710,7 +724,7 @@ jumpBtn.addEventListener('pointerup', endJump); jumpBtn.addEventListener('pointe
 const aimBtn = $('aimBtn'), swapBtn = $('swapBtn');
 function setAim(v) { aiming = v; aimBtn.classList.toggle('down', v); }
 aimBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play') setAim(!aiming); }); // tap to raise, tap again to lower
-swapBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play') setWeapon(wi + 1); });
+swapBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play' && !pvp) setWeapon(wi + 1); });
 setWeapon(wi, true);
 
 /* ---------- button layout ---------- */
@@ -760,10 +774,10 @@ let locked = false;
 layer.addEventListener('mousedown', e => { if (state !== 'play' || touchMode && e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return; if (e.button === 2) setAim(true); else mouseFire = true;
   if (!locked && layer.requestPointerLock) { try { const p = layer.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (_) {} } });
 addEventListener('mouseup', e => { if (e.button === 2) setAim(false); else mouseFire = false; });
-addEventListener('wheel', e => { if (state === 'play' && swapT <= 0 && e.deltaY) setWeapon(wi + (e.deltaY > 0 ? 1 : -1)); }, { passive: true });
+addEventListener('wheel', e => { if (state === 'play' && !pvp && swapT <= 0 && e.deltaY) setWeapon(wi + (e.deltaY > 0 ? 1 : -1)); }, { passive: true });
 addEventListener('mousemove', e => { if (state === 'play' && (locked || mouseFire)) turn(e.movementX || 0, e.movementY || 0); });
 document.addEventListener('pointerlockchange', () => { const was = locked; locked = document.pointerLockElement === layer; if (was && !locked && state === 'play') pause(); });
-addEventListener('keydown', e => { keys[e.code] = true; if (state === 'play') { if (e.code === 'KeyR') startReload(); if (e.code === 'KeyQ') setWeapon(wi + 1); if (/^Digit[1-5]$/.test(e.code)) setWeapon(+e.code[5] - 1); if (e.code === 'Escape' || e.code === 'KeyP') pause(); if (e.code === 'Space') e.preventDefault(); } });
+addEventListener('keydown', e => { keys[e.code] = true; if (state === 'play') { if (e.code === 'KeyR') startReload(); if (e.code === 'KeyQ' && !pvp) setWeapon(wi + 1); if (/^Digit[1-5]$/.test(e.code)) (pvp ? pickWeapon : setWeapon)(+e.code[5] - 1); if (e.code === 'Escape' || e.code === 'KeyP') pause(); if (e.code === 'Space') e.preventDefault(); } });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseFire = false; });
 for (const ev of ['contextmenu', 'gesturestart', 'dblclick']) document.addEventListener(ev, e => e.preventDefault());
@@ -773,10 +787,12 @@ let wakeLock = null;
 const LEAD = $('lead').textContent;
 function show(mode) {
   state = mode; document.body.classList.remove('editing'); document.body.classList.toggle('playing', mode === 'play'); document.body.classList.toggle('vs', pvp); overlay.hidden = mode === 'play';
-  $('vsBtn').hidden = $('vsNote').hidden = mode !== 'menu'; $('roomRow').hidden = mode !== 'menu' || !standalone; $('quitBtn').hidden = mode === 'menu' || mode === 'play';
+  const inRoom = mode === 'pause' && pvp && standalone && !!room; // paused in a match: show which room this is, so it can be passed on
+  $('vsBtn').hidden = mode !== 'menu'; $('vsNote').hidden = $('roomRow').hidden = !(inRoom || mode === 'menu' && standalone); if (mode === 'menu' && !standalone) $('vsNote').hidden = false;
+  roomInput.readOnly = mode !== 'menu'; if (inRoom) { roomInput.value = room.code; vsNote.textContent = 'この部屋コードを入れた人が相手になります。招待リンクを送れば、コード入力なしで入れます。'; } $('quitBtn').hidden = mode === 'menu' || mode === 'play';
   $('quitBtn').textContent = pvp ? '対戦をやめる' : 'タイトルへ戻る';
   if (mode === 'menu') { $('eyebrow').textContent = '夜勤警備 ／ 9番バース'; $('heading').innerHTML = '第九<span>埠頭</span>'; $('lead').hidden = false; $('lead').textContent = LEAD; $('stats').hidden = true; $('go').textContent = '勤務開始'; }
-  if (mode === 'pause') { $('eyebrow').textContent = pvp ? `撃破 ${net.k} ／ 被撃破 ${net.d}` : `第${wave}波 ／ 得点 ${score}`; $('heading').textContent = pvp ? '離席中' : '一時停止';
+  if (mode === 'pause') { $('eyebrow').textContent = pvp ? `${room && room.code ? `部屋 ${room.code} ／ ` : ''}撃破 ${net.k} ／ 被撃破 ${net.d}` : `第${wave}波 ／ 得点 ${score}`; $('heading').textContent = pvp ? '離席中' : '一時停止';
     $('lead').hidden = !pvp; if (pvp) $('lead').textContent = vsRanking(); $('stats').hidden = true; $('go').textContent = '再開する'; }
   if (mode === 'over') { $('eyebrow').textContent = score >= best && score > 0 ? '自己最高を更新' : '夜勤警備 ／ 9番バース'; $('heading').textContent = '勤務終了'; $('lead').hidden = true; $('stats').hidden = false;
     $('stScore').textContent = score; $('stWave').textContent = `第${wave}波`; $('stBest').textContent = best; $('go').textContent = 'もう一度'; }
@@ -798,7 +814,21 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 const VS = [['橙', '#ff8a3d'], ['青緑', '#27d3b8'], ['桃', '#ff5fa2'], ['黄', '#ffe14d'], ['青', '#4d9bff'], ['白', '#f2f5f0']];
 const SPAWNS = [[-26, -26], [26, 26], [-26, 26], [26, -26], [8, -27], [-12, 27], [-27, 8], [27, 0]];
 let room = null, myPeer = null;
-const net = { c: -1, d: 0, k: 0, lk: null, f: 0, dm: {}, seen: {}, dead: 0, sendT: 0 };
+const net = { c: -1, d: 0, k: 0, lk: null, f: 0, dm: {}, seen: {}, dead: 0, pick: false, sendT: 0 }; // pick: waiting for the first weapon choice
+// One weapon per life: chosen before the first spawn, and again while waiting to come back.
+const pickEl = $('pick'); let pickI = 1;
+const pickBtns = WEAPONS.map((w, i) => {
+  const b = document.createElement('button'), n = document.createElement('b'), t = document.createElement('span');
+  b.className = 'ghost'; n.textContent = `${i + 1} ${w.name}`; t.textContent = w.tip; b.append(n, t);
+  b.addEventListener('click', () => pickWeapon(i)); $('pickList').append(b); return b;
+});
+function pickShow(title, note) { $('pickTitle').textContent = title; $('pickNote').textContent = note; pickBtns.forEach((b, k) => b.setAttribute('aria-pressed', String(!net.pick && k === pickI))); pickEl.hidden = false; }
+function pickWeapon(i) {
+  if (!pvp || state !== 'play' || !(net.pick || net.dead > 0)) return;
+  pickI = i; tone('square', 320, 520, 0.05, 0.06);
+  if (net.pick) { net.pick = false; vsRespawn(); net.sendT = 0; announce('対戦開始', remotes.size ? '相手を見つけて撃て' : '相手の参加を待っています'); sfx.wave(); }
+  else pickBtns.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
+}
 const remotes = new Map();
 const num = v => typeof v === 'number' && isFinite(v) ? v : 0, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const RG = { vest: new THREE.BoxGeometry(0.56, 0.7, 0.32), legs: new THREE.BoxGeometry(0.44, 0.78, 0.26), head: new THREE.SphereGeometry(0.2, 10, 8), gun: new THREE.BoxGeometry(0.08, 0.1, 0.6) };
@@ -816,7 +846,7 @@ function vsSend(a) {
 function vsRespawn() {
   let best = SPAWNS[Math.random() * SPAWNS.length | 0], bestD = -1;
   if (liveRemotes.length) for (const s of SPAWNS) { let m = 1e9; for (const r of liveRemotes) m = Math.min(m, Math.hypot(r.x - s[0], r.z - s[1])); if (m > bestD) { bestD = m; best = s; } }
-  P.x = best[0]; P.z = best[1]; P.yaw = Math.atan2(P.x, P.z); P.y = 0; P.vy = 0; P.ey = EYEH; P.pitch = 0; P.hp = 100; refill(); net.dead = 0; hurtA = 0;
+  P.x = best[0]; P.z = best[1]; P.yaw = Math.atan2(P.x, P.z); P.y = 0; P.vy = 0; P.ey = EYEH; P.pitch = 0; P.hp = 100; setWeapon(pickI, true); refill(); net.dead = 0; hurtA = 0; pickEl.hidden = true;
 }
 function vsRemoteShot(r) {
   r.lastShot = time;
@@ -847,7 +877,7 @@ function vsSync(dt, immune) { // immune: catch up on the room without taking dam
     const f = num(s.f); if (f !== r.f) { r.f = f; if (r.alive && !immune) vsRemoteShot(r); }
     const d = num(s.d); if (d > r.d && myPeer && s.lk === myPeer) { net.k++; announce(`${VS[r.c][0]}を撃破`); sfx.boom(); fx(r.x, r.y, r.z, 4, COL.sodium, 0.35); } r.d = d;
     const dealt = myPeer && s.dm && typeof s.dm === 'object' ? num(s.dm[myPeer]) : 0, was = net.seen[p.peer];
-    if (was !== undefined && dealt > was && !immune && net.dead <= 0) { P.hp -= Math.min(dealt - was, 110); hitter = r; }
+    if (was !== undefined && dealt > was && !immune && net.dead <= 0 && !net.pick) { P.hp -= Math.min(dealt - was, 110); hitter = r; }
     net.seen[p.peer] = dealt;
   }
   for (const [id, r] of remotes) if (!here.has(id)) { scene.remove(r.g); r.mat.dispose(); r.lamp.material.dispose(); remotes.delete(id); }
@@ -855,9 +885,9 @@ function vsSync(dt, immune) { // immune: catch up on the room without taking dam
   if (clash) { let c = 0; while (used.has(c) && c < VS.length - 1) c++; net.c = c; $('vsDot').style.background = VS[c][1]; }
   if (hitter) {
     hurtFrom(hitter.x, hitter.z);
-    if (P.hp <= 0) { P.hp = 0; net.dead = 3; net.d++; net.lk = hitter.peer; announce('やられた', `${VS[hitter.c][0]}に撃たれた　3秒で復帰`); sfx.boom(); net.sendT = 0; }
+    if (P.hp <= 0) { P.hp = 0; net.dead = 3; net.d++; net.lk = hitter.peer; setAim(false); pickI = wi; pickShow(`${VS[hitter.c][0]}に撃たれた`, '3秒で復帰。武器を替えるなら今選ぶ' + (touchMode ? '' : '（1〜5 キー）')); sfx.boom(); net.sendT = 0; }
   } else if (net.dead > 0 && !immune) { net.dead -= dt; if (net.dead <= 0) { vsRespawn(); net.sendT = 0; } }
-  if ((net.sendT -= dt) <= 0) { net.sendT = 1 / 15; vsSend(net.dead > 0 ? 0 : 1); }
+  if ((net.sendT -= dt) <= 0) { net.sendT = 1 / 15; vsSend(net.dead > 0 || net.pick ? 0 : 1); }
 }
 function vsRanking() {
   const rows = [[`あなた（${VS[Math.max(0, net.c)][0]}）`, net.k]]; for (const r of remotes.values()) rows.push([VS[r.c][0], r.k]);
@@ -867,13 +897,13 @@ function vsRanking() {
 function vsLeave() {
   if (room) room.presence({ pv: null }).catch(() => {});
   for (const r of remotes.values()) { scene.remove(r.g); r.mat.dispose(); r.lamp.material.dispose(); }
-  remotes.clear(); liveRemotes.length = 0; pvp = false; show('menu');
+  remotes.clear(); liveRemotes.length = 0; pvp = false; net.pick = false; pickEl.hidden = true; if (standalone && room) vsNote.textContent = `部屋 ${room.code} に接続しました。同じコードを入れた人が相手になります。`; show('menu');
 }
 const vsBtn = $('vsBtn'), vsNote = $('vsNote');
 function vsStart() {
   if (!room) return;
-  audioInit(); clearField(); pvp = true; net.k = net.d = 0; net.lk = null; net.c = -1; net.dead = 0; net.sendT = 0; score = 0;
-  vsSync(0, true); vsRespawn(); show('play'); announce('対戦開始', remotes.size ? '相手を見つけて撃て' : '相手の参加を待っています'); sfx.wave();
+  audioInit(); clearField(); pvp = true; net.k = net.d = 0; net.lk = null; net.c = -1; net.dead = 0; net.sendT = 0; score = 0; net.pick = true; setAim(false);
+  vsSync(0, true); show('play'); pickShow('武器を選ぶ', 'この一丁で戦う。倒されたら選び直せる');
   if (navigator.wakeLock && !wakeLock) navigator.wakeLock.request('screen').then(w => { wakeLock = w; w.addEventListener('release', () => { wakeLock = null; }); }).catch(() => {});
 }
 $('quitBtn').addEventListener('click', () => { if (pvp) vsLeave(); else { clearField(); show('menu'); } });
@@ -975,7 +1005,7 @@ function drawRadar() {
 
 function update(dt) {
   time += dt;
-  if (pvp && net.dead > 0) { vsSync(dt); return; }
+  if (pvp && (net.dead > 0 || net.pick)) { vsSync(dt); return; }
   // player
   let mx = joy.x, my = joy.y; if (Math.hypot(mx, my) < 0.12) mx = my = 0;
   if (keys.KeyW || keys.ArrowUp) my -= 1; if (keys.KeyS || keys.ArrowDown) my += 1; if (keys.KeyA || keys.ArrowLeft) mx -= 1; if (keys.KeyD || keys.ArrowRight) mx += 1;
