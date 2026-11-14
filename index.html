@@ -137,7 +137,17 @@ body.touch #pcHow{display:none}
 .roomCtl{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 #roomCode{width:7.5em;font-family:var(--f-data);font-size:16px;padding:8px 10px;min-height:40px;background:var(--ink);color:var(--signal);border:1px solid var(--line);border-radius:4px;
   text-transform:uppercase;letter-spacing:.14em;-webkit-user-select:text;user-select:text}
-#roomCode:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
+#roomCode:focus-visible,#playerName:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
+#nameRow label{white-space:nowrap}
+#playerName{width:11em;max-width:55%;font-family:var(--f-body);font-weight:700;font-size:16px;padding:8px 10px;min-height:40px;box-sizing:border-box;background:var(--ink);color:var(--signal);border:1px solid var(--line);border-radius:4px;
+  -webkit-user-select:text;user-select:text}
+#playerName.need{border-color:var(--alarm)}
+#killLog{top:calc(88px + var(--sat));left:var(--sal);display:none;flex-direction:column;gap:3px;align-items:flex-start;max-width:70vw}
+body.vs #killLog{display:flex}
+body.editing #killLog{visibility:hidden}
+#killLog div{font-size:13px;font-weight:700;line-height:1.3;padding:2px 8px;background:var(--panel);border-radius:3px;white-space:nowrap;animation:klog 6s linear forwards}
+#killLog i{font-style:normal;color:var(--steel);margin:0 6px}
+@keyframes klog{0%{opacity:0;transform:translateX(-8px)}4%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
 #vsNote{margin:0;font-size:12px;line-height:1.6;color:var(--steel)}
 #vsRow{display:none;gap:10px;align-items:baseline;font-size:13px;font-weight:700;flex-wrap:wrap}
 #vsRow b{font-family:var(--f-data);font-size:15px;color:var(--sodium)}
@@ -200,6 +210,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
     <div id="waveRow"><span>第<b id="waveNum">1</b>波</span><span class="label">残り <b id="leftNum">0</b> 機</span></div>
     <div id="vsRow"><i id="vsDot"></i><span>撃破 <b id="vsK">0</b></span><span>被撃破 <b id="vsD">0</b></span><span class="label">参加 <b id="vsN">1</b> 人</span></div>
   </div>
+  <div id="killLog" aria-live="polite"></div>
   <div id="topRight">
     <div id="scoreBox"><div class="label">得点</div><div id="score" class="data">0</div></div>
     <canvas id="radar" width="168" height="168"></canvas>
@@ -248,6 +259,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
           <div class="seg" id="sndSeg"><button id="snd1" data-v="1">入</button><button id="snd0" data-v="0">切</button></div></div>
       </div>
       <button id="go">勤務開始</button>
+      <div class="opt" id="nameRow"><label for="playerName">名前（対戦では必須）</label><input id="playerName" maxlength="10" autocomplete="off" spellcheck="false" placeholder="10文字まで"></div>
       <div class="opt" id="roomRow" hidden><label for="roomCode">部屋コード</label>
         <span class="roomCtl"><input id="roomCode" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="ghost" id="roomCopy">招待リンクをコピー</button></span></div>
       <button id="vsBtn" disabled>オンライン対戦</button>
@@ -260,7 +272,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
         <li><b>狙う</b>狙うボタンで構える。拡大して弾のばらつきが減る。SR はスコープ</li>
         <li><b>武器</b>武器ボタンで SMG・AR・SR・LMG・SG を切り替え。対戦では出撃のたびに一丁だけ選ぶ</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる</li>
-        <li><b>対戦</b>同じページを開いた相手と撃ち合う。狙いの補正とオート射撃は無し。頭は1.4倍。3秒で復帰</li>
+        <li><b>対戦</b>名前を入れて、同じページを開いた相手と撃ち合う。狙いの補正とオート射撃は無し。頭は1.4倍。3秒で復帰</li>
         <li id="pcHow"><b>パソコン</b>WASD で移動、クリックで射撃、右クリックで構える、1〜5・Q・ホイールで武器、スペースで跳ぶ、R で装填</li>
       </ul>
     </div>
@@ -789,7 +801,7 @@ function show(mode) {
   state = mode; document.body.classList.remove('editing'); document.body.classList.toggle('playing', mode === 'play'); document.body.classList.toggle('vs', pvp); overlay.hidden = mode === 'play';
   const inRoom = mode === 'pause' && pvp && standalone && !!room; // paused in a match: show which room this is, so it can be passed on
   $('vsBtn').hidden = mode !== 'menu'; $('vsNote').hidden = $('roomRow').hidden = !(inRoom || mode === 'menu' && standalone); if (mode === 'menu' && !standalone) $('vsNote').hidden = false;
-  roomInput.readOnly = mode !== 'menu'; if (inRoom) { roomInput.value = room.code; vsNote.textContent = 'この部屋コードを入れた人が相手になります。招待リンクを送れば、コード入力なしで入れます。'; } $('quitBtn').hidden = mode === 'menu' || mode === 'play';
+  $('nameRow').hidden = mode !== 'menu'; roomInput.readOnly = mode !== 'menu'; if (inRoom) { roomInput.value = room.code; vsNote.textContent = 'この部屋コードを入れた人が相手になります。招待リンクを送れば、コード入力なしで入れます。'; } $('quitBtn').hidden = mode === 'menu' || mode === 'play';
   $('quitBtn').textContent = pvp ? '対戦をやめる' : 'タイトルへ戻る';
   if (mode === 'menu') { $('eyebrow').textContent = '夜勤警備 ／ 9番バース'; $('heading').innerHTML = '第九<span>埠頭</span>'; $('lead').hidden = false; $('lead').textContent = LEAD; $('stats').hidden = true; $('go').textContent = '勤務開始'; }
   if (mode === 'pause') { $('eyebrow').textContent = pvp ? `${room && room.code ? `部屋 ${room.code} ／ ` : ''}撃破 ${net.k} ／ 被撃破 ${net.d}` : `第${wave}波 ／ 得点 ${score}`; $('heading').textContent = pvp ? '離席中' : '一時停止';
@@ -830,6 +842,23 @@ function pickWeapon(i) {
   else pickBtns.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
 }
 const remotes = new Map();
+// Names are typed by players and shown on other people's screens: strip control and direction-override characters, cap the length, and only ever insert as text.
+const cleanName = v => Array.from(String(typeof v === 'string' ? v : '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/g, '').trim()).slice(0, 10).join('');
+const nameInput = $('playerName'); let myName = cleanName(store.get('name', '')); nameInput.value = myName;
+nameInput.addEventListener('input', () => nameInput.classList.remove('need'));
+function needName() { // versus cannot start without a name
+  myName = cleanName(nameInput.value); nameInput.value = myName;
+  if (!myName) { nameInput.classList.add('need'); vsNote.textContent = '対戦には名前が必要です。名前を入れてから、もう一度押してください。'; nameInput.focus(); return false; }
+  store.set('name', myName); return true;
+}
+const killLogEl = $('killLog');
+function killLog(kn, kc, vn, vc) {
+  const row = document.createElement('div'), a = document.createElement('span'), m = document.createElement('i'), b = document.createElement('span');
+  a.textContent = kn; a.style.color = kc; m.textContent = '▸'; b.textContent = vn; b.style.color = vc; row.append(a, m, b);
+  killLogEl.append(row); while (killLogEl.children.length > 4) killLogEl.firstChild.remove();
+  setTimeout(() => row.remove(), 6000);
+}
+const myCol = () => VS[Math.max(0, net.c)][1];
 const num = v => typeof v === 'number' && isFinite(v) ? v : 0, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const RG = { vest: new THREE.BoxGeometry(0.56, 0.7, 0.32), legs: new THREE.BoxGeometry(0.44, 0.78, 0.26), head: new THREE.SphereGeometry(0.2, 10, 8), gun: new THREE.BoxGeometry(0.08, 0.1, 0.6) };
 function mkRemote(peer) {
@@ -837,11 +866,11 @@ function mkRemote(peer) {
   mk(RG.vest, mat, 0, 1.12, 0, g); mk(RG.legs, darkMat, 0, 0.39, 0, g); mk(RG.head, mat, 0, 1.66, 0, g); mk(RG.gun, darkMat, 0.22, 1.2, -0.4, g);
   const lamp = glow(0xffffff, 0.9); lamp.position.set(0, 1.95, 0); g.add(lamp);
   g.visible = false; scene.add(g);
-  return { peer, g, mat, lamp, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0, pitch: 0, py: 0, tpy: 0, y: 1.25, r: 0.6, alive: false, c: -1, f: 0, d: 0, k: 0, lastShot: -9, fresh: true };
+  return { peer, g, mat, lamp, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0, pitch: 0, py: 0, tpy: 0, y: 1.25, r: 0.6, alive: false, c: -1, name: '', f: 0, d: 0, k: 0, lastShot: -9, fresh: true };
 }
 function vsSend(a) {
   if (!room) return;
-  room.presence({ pv: 1, x: +P.x.toFixed(2), z: +P.z.toFixed(2), y: +P.y.toFixed(2), yaw: +P.yaw.toFixed(3), pt: +P.pitch.toFixed(3), a, c: net.c, d: net.d, lk: net.lk, k: net.k, f: net.f, dm: Object.assign({}, net.dm) }).catch(() => {});
+  room.presence({ pv: 1, n: myName, x: +P.x.toFixed(2), z: +P.z.toFixed(2), y: +P.y.toFixed(2), yaw: +P.yaw.toFixed(3), pt: +P.pitch.toFixed(3), a, c: net.c, d: net.d, lk: net.lk, k: net.k, f: net.f, dm: Object.assign({}, net.dm) }).catch(() => {});
 }
 function vsRespawn() {
   let best = SPAWNS[Math.random() * SPAWNS.length | 0], bestD = -1;
@@ -870,12 +899,19 @@ function vsSync(dt, immune) { // immune: catch up on the room without taking dam
     r.tx = clamp(num(s.x), -LIM, LIM); r.tz = clamp(num(s.z), -LIM, LIM); r.tyaw = num(s.yaw); r.tpy = clamp(num(s.y), 0, 12); r.pitch = clamp(num(s.pt), -1.2, 1.2); r.k = num(s.k) | 0; r.alive = s.a === 1;
     const c = Math.abs(num(s.c) | 0) % VS.length; used.add(c);
     if (c !== r.c) { r.c = c; r.mat.color.set(VS[c][1]); r.lamp.material.color.set(VS[c][1]); }
+    r.name = cleanName(s.n) || VS[c][0]; // a page that sends no name falls back to its colour
     const k = r.fresh ? 1 : Math.min(1, dt * 12); r.fresh = false;
     r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.py += (r.tpy - r.py) * k; r.y = r.py + 1.25; const da = r.tyaw - r.yaw; r.yaw += Math.atan2(Math.sin(da), Math.cos(da)) * k;
     r.g.visible = r.alive; r.g.position.set(r.x, r.py, r.z); r.g.rotation.y = r.yaw;
     if (r.alive) liveRemotes.push(r);
     const f = num(s.f); if (f !== r.f) { r.f = f; if (r.alive && !immune) vsRemoteShot(r); }
-    const d = num(s.d); if (d > r.d && myPeer && s.lk === myPeer) { net.k++; announce(`${VS[r.c][0]}を撃破`); sfx.boom(); fx(r.x, r.y, r.z, 4, COL.sodium, 0.35); } r.d = d;
+    const d = num(s.d);
+    if (d > r.d) { // this player went down: credit it if it was ours, and tell everyone who did it
+      const mine = !!myPeer && s.lk === myPeer, kr = mine ? null : remotes.get(s.lk);
+      if (mine) { net.k++; announce(`${r.name}を撃破`); sfx.boom(); fx(r.x, r.y, r.z, 4, COL.sodium, 0.35); }
+      killLog(mine ? myName : kr && kr.name || '？', mine ? myCol() : kr && kr.c >= 0 ? VS[kr.c][1] : COL.steel, r.name, VS[r.c][1]);
+    }
+    r.d = d;
     const dealt = myPeer && s.dm && typeof s.dm === 'object' ? num(s.dm[myPeer]) : 0, was = net.seen[p.peer];
     if (was !== undefined && dealt > was && !immune && net.dead <= 0 && !net.pick) { P.hp -= Math.min(dealt - was, 110); hitter = r; }
     net.seen[p.peer] = dealt;
@@ -885,24 +921,24 @@ function vsSync(dt, immune) { // immune: catch up on the room without taking dam
   if (clash) { let c = 0; while (used.has(c) && c < VS.length - 1) c++; net.c = c; $('vsDot').style.background = VS[c][1]; }
   if (hitter) {
     hurtFrom(hitter.x, hitter.z);
-    if (P.hp <= 0) { P.hp = 0; net.dead = 3; net.d++; net.lk = hitter.peer; setAim(false); pickI = wi; pickShow(`${VS[hitter.c][0]}に撃たれた`, '3秒で復帰。武器を替えるなら今選ぶ' + (touchMode ? '' : '（1〜5 キー）')); sfx.boom(); net.sendT = 0; }
+    if (P.hp <= 0) { P.hp = 0; net.dead = 3; net.d++; net.lk = hitter.peer; setAim(false); pickI = wi; killLog(hitter.name, VS[hitter.c][1], myName, myCol()); pickShow(`${hitter.name}に撃たれた`, '3秒で復帰。武器を替えるなら今選ぶ' + (touchMode ? '' : '（1〜5 キー）')); sfx.boom(); net.sendT = 0; }
   } else if (net.dead > 0 && !immune) { net.dead -= dt; if (net.dead <= 0) { vsRespawn(); net.sendT = 0; } }
   if ((net.sendT -= dt) <= 0) { net.sendT = 1 / 15; vsSend(net.dead > 0 || net.pick ? 0 : 1); }
 }
 function vsRanking() {
-  const rows = [[`あなた（${VS[Math.max(0, net.c)][0]}）`, net.k]]; for (const r of remotes.values()) rows.push([VS[r.c][0], r.k]);
+  const rows = [[`${myName}（あなた）`, net.k]]; for (const r of remotes.values()) rows.push([r.name, r.k]);
   rows.sort((a, b) => b[1] - a[1]);
   return '撃破数　' + rows.map((r, i) => `${i + 1}. ${r[0]} ${r[1]}`).join('　') + '　　離席中は相手から見えず、撃たれません。';
 }
 function vsLeave() {
   if (room) room.presence({ pv: null }).catch(() => {});
   for (const r of remotes.values()) { scene.remove(r.g); r.mat.dispose(); r.lamp.material.dispose(); }
-  remotes.clear(); liveRemotes.length = 0; pvp = false; net.pick = false; pickEl.hidden = true; if (standalone && room) vsNote.textContent = `部屋 ${room.code} に接続しました。同じコードを入れた人が相手になります。`; show('menu');
+  remotes.clear(); liveRemotes.length = 0; killLogEl.textContent = ''; pvp = false; net.pick = false; pickEl.hidden = true; if (standalone && room) vsNote.textContent = `部屋 ${room.code} に接続しました。同じコードを入れた人が相手になります。`; show('menu');
 }
 const vsBtn = $('vsBtn'), vsNote = $('vsNote');
 function vsStart() {
   if (!room) return;
-  audioInit(); clearField(); pvp = true; net.k = net.d = 0; net.lk = null; net.c = -1; net.dead = 0; net.sendT = 0; score = 0; net.pick = true; setAim(false);
+  audioInit(); clearField(); pvp = true; net.k = net.d = 0; net.lk = null; net.c = -1; net.dead = 0; net.sendT = 0; score = 0; net.pick = true; setAim(false); killLogEl.textContent = '';
   vsSync(0, true); show('play'); pickShow('武器を選ぶ', 'この一丁で戦う。倒されたら選び直せる');
   if (navigator.wakeLock && !wakeLock) navigator.wakeLock.request('screen').then(w => { wakeLock = w; w.addEventListener('release', () => { wakeLock = null; }); }).catch(() => {});
 }
@@ -956,7 +992,7 @@ function joinStandalone() {
   openChannel(NETCONF, code).then(r => { room = r; vsBtn.disabled = false; vsNote.textContent = `部屋 ${code} に接続しました。同じコードを入れた人が相手になります。`; if (state === 'menu') vsStart(); })
     .catch(() => { vsBtn.disabled = false; vsNote.textContent = '接続できませんでした。config.js の URL と公開キー、通信状況を確認してください。'; });
 }
-vsBtn.addEventListener('click', () => { audioInit(); if (standalone) joinStandalone(); else vsStart(); });
+vsBtn.addEventListener('click', () => { audioInit(); if (!needName()) return; if (standalone) joinStandalone(); else vsStart(); });
 if (standalone) {
   if (!NETCONF || !NETCONF.url || !NETCONF.key) vsNote.textContent = '対戦は未設定です。config.js に Supabase の URL と公開キーを入れると使えます。';
   else if (!window.supabase || !window.supabase.createClient) vsNote.textContent = '通信ライブラリを読み込めませんでした。通信状況を確認して、ページを開き直してください。';
