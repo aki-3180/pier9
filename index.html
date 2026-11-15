@@ -50,6 +50,10 @@ body{background:var(--night);color:var(--signal);font-family:var(--f-body);overf
 #hpFill{height:100%;width:100%;background:var(--hull);transition:width .15s,background .2s}
 #waveRow{display:flex;gap:10px;align-items:baseline;font-size:13px;font-weight:700}
 #waveRow b{font-family:var(--f-data);font-size:15px;color:var(--sodium)}
+#bossRow{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+#bossRow[hidden]{display:none}
+#bossBar{height:6px;background:rgba(238,242,234,.14);transform:skewX(-18deg);overflow:hidden}
+#bossFill{height:100%;width:100%;background:var(--alarm);transition:width .15s}
 
 /* top-right: score, radar, pause */
 #topRight{top:calc(10px + var(--sat));right:var(--sar);display:flex;gap:10px;align-items:flex-start}
@@ -182,7 +186,7 @@ body.vs #vsBoard{display:table}
 #vsTable td{padding:5px 12px}
 #vsTable td.rk{padding-right:0}
 #vsTable td.k{font-size:19px}
-body.vs #waveRow,body.vs #scoreBox{display:none}
+body.vs #waveRow,body.vs #bossRow,body.vs #scoreBox{display:none}
 body.vs:not(.editing) #swapBtn{display:none}
 #roomCode[readonly]{color:var(--sodium);border-color:var(--sodium)}
 #pick{left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:max-content;max-width:min(560px,calc(100% - 32px));pointer-events:auto;
@@ -238,6 +242,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
     <div id="hpRow"><span class="label">体力</span><span id="hpNum" class="data">100</span></div>
     <div id="hpBar"><div id="hpFill"></div></div>
     <div id="waveRow"><span>第<b id="waveNum">1</b>波</span><span class="label">残り <b id="leftNum">0</b> 機</span></div>
+    <div id="bossRow" hidden><span class="label">統括機</span><div id="bossBar"><div id="bossFill"></div></div></div>
     <table id="vsBoard" class="board"></table>
   </div>
   <div id="killLog" aria-live="polite"></div>
@@ -1142,7 +1147,8 @@ for (let i = 0; i < 40; i++) { const m = mk(boltGeo, boltMat, 0, -10, 0); m.visi
 const TYPES = {
   scout: { hp: 36, r: 0.6, speed: 4.2, range: 11, alt: 3.2, eye: 0xff4d3d, score: 100, scale: 1, name: '偵察機' },
   ram:   { hp: 24, r: 0.55, speed: 7.4, range: 0, alt: 3.0, eye: 0xffd23d, score: 150, scale: 0.85, name: '突撃機' },
-  heavy: { hp: 150, r: 1.0, speed: 2.4, range: 14, alt: 4.4, eye: 0xff2d8a, score: 400, scale: 1.7, name: '重装機' }
+  heavy: { hp: 150, r: 1.0, speed: 2.4, range: 14, alt: 4.4, eye: 0xff2d8a, score: 400, scale: 1.7, name: '重装機' },
+  boss:  { hp: 2400, r: 2.0, speed: 2.0, range: 15, alt: 7.5, eye: 0xff4d3d, score: 5000, scale: 3.4, name: '統括機' } // flies above the walls (5.4 m), so it is in sight from anywhere outdoors
 };
 const G = {
   body: new THREE.SphereGeometry(0.5, 14, 10), eye: new THREE.SphereGeometry(0.16, 10, 8),
@@ -1150,21 +1156,28 @@ const G = {
 };
 const rotorMat = new THREE.MeshBasicMaterial({ color: 0x9fb0c8, transparent: true, opacity: 0.28, depthWrite: false });
 const enemies = [];
-function spawnEnemy(type) {
+const BOSS_EVERY = 20;
+function spawnEnemy(type, from) { // from: a boss letting this one go from its own belly
   const T = TYPES[type], g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: type === 'ram' ? 0x5a3a22 : type === 'heavy' ? 0x3a2f48 : 0x394454, emissive: 0x000000 });
+  const bodyMat = new THREE.MeshLambertMaterial({ color: type === 'ram' ? 0x5a3a22 : type === 'heavy' ? 0x3a2f48 : type === 'boss' ? 0x4a2226 : 0x394454, emissive: 0x000000 });
   mk(G.body, bodyMat, 0, 0, 0, g).scale.set(1, 0.62, 1);
   mk(G.eye, new THREE.MeshBasicMaterial({ color: T.eye, fog: false }), 0, 0, 0.42, g);
   const eg = glow(T.eye, 1.3); eg.position.set(0, 0, 0.5); g.add(eg);
   mk(G.ring, darkMat, 0, 0, 0, g).rotation.x = Math.PI / 2;
   mk(G.arm, darkMat, 0, 0.12, 0, g);
   const rotors = [mk(G.rotor, rotorMat, -0.75, 0.17, 0, g), mk(G.rotor, rotorMat, 0.75, 0.17, 0, g)];
+  if (type === 'boss') { // four rotors, a second ring standing upright, and an eye to either side of the main one
+    mk(G.arm, darkMat, 0, 0.12, 0, g).rotation.y = Math.PI / 2; rotors.push(mk(G.rotor, rotorMat, 0, 0.17, -0.75, g), mk(G.rotor, rotorMat, 0, 0.17, 0.75, g));
+    mk(G.ring, darkMat, 0, 0, 0, g).scale.setScalar(0.8);
+    for (const sx of [-0.24, 0.24]) mk(G.eye, new THREE.MeshBasicMaterial({ color: 0xffd23d, fog: false }), sx, -0.06, 0.38, g).scale.setScalar(0.5);
+  }
   g.scale.setScalar(T.scale);
   const side = MAP.sides[Math.random() * MAP.sides.length | 0], a = Math.random() * 2 - 1;
-  const e = { type, T, g, bodyMat, rotors, hp: T.hp * (1 + wave * 0.04), r: T.r,
-    x: side < 2 ? a * MAP.dx : side === 2 ? -MAP.dx : MAP.dx, z: side === 0 ? -MAP.dz : side === 1 ? MAP.dz : a * MAP.dz, y: 11,
+  const e = { type, T, g, bodyMat, rotors, hp: type === 'boss' ? T.hp * Math.max(1, wave / BOSS_EVERY) : T.hp * (1 + wave * 0.02), r: T.r, st: 6,
+    x: from ? from.x + Math.random() * 2 - 1 : side < 2 ? a * MAP.dx : side === 2 ? -MAP.dx : MAP.dx, z: from ? from.z + Math.random() * 2 - 1 : side === 0 ? -MAP.dz : side === 1 ? MAP.dz : a * MAP.dz, y: from ? from.y - 1.5 : 11,
     vx: 0, vz: 0, orbit: Math.random() < 0.5 ? 1 : -1, ph: Math.random() * 6, cd: 2.5 + Math.random() * 2, burst: 0, bt: 0, flash: 0,
-    speed: T.speed * (1 + Math.min(wave, 12) * 0.025) };
+    speed: T.speed * (1 + Math.min(wave, 20) * 0.0125) };
+  e.max = e.hp;
   g.position.set(e.x, e.y, e.z); scene.add(g); enemies.push(e);
 }
 function killEnemy(e, silent) {
@@ -1240,13 +1253,14 @@ function setWeapon(i, quiet) {
 }
 function refill() { WEAPONS.forEach((w, i) => { mags[i] = w.mag; cds[i] = 0; }); ammo = W.mag; reloadT = fireCd = swapT = 0; setAim(false); }
 let queue = [], spawnT = 0, breakT = 0, time = 0, hurtA = 0, dirA = 0, dirAng = 0;
-const hudEl = { hpNum: $('hpNum'), hpFill: $('hpFill'), wave: $('waveNum'), left: $('leftNum'), score: $('score'), ammo: $('ammo'), cross: $('cross'), hit: $('hit'), hurt: $('hurt'), dmg: $('dmgDir'), ann: $('announce') };
+const hudEl = { hpNum: $('hpNum'), hpFill: $('hpFill'), wave: $('waveNum'), left: $('leftNum'), score: $('score'), ammo: $('ammo'), cross: $('cross'), hit: $('hit'), hurt: $('hurt'), dmg: $('dmgDir'), ann: $('announce'), bossRow: $('bossRow'), bossFill: $('bossFill') };
 function announce(big, small) { const a = hudEl.ann; a.innerHTML = ''; a.append(big); if (small) { const s = document.createElement('small'); s.textContent = small; a.append(s); } a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
 function startWave(n) {
   wave = n; queue = [];
-  const count = Math.min(5 + n * 2, 28);
-  for (let i = 0; i < count; i++) queue.push(n >= 4 && i % 6 === 5 ? 'heavy' : n >= 2 && Math.random() < Math.min(0.2 + n * 0.03, 0.45) ? 'ram' : 'scout');
-  spawnT = 1.2; announce(`第${n}波`, n === 2 ? '突撃機に注意　近づく前に撃て' : n === 4 ? '重装機が接近中' : 'ドローン接近'); sfx.wave();
+  const boss = n % BOSS_EVERY === 0, count = boss ? 6 : Math.min(4 + n, 24); // a boss wave: the boss, a few escorts, and the rams it lets go
+  if (boss) queue.push('boss');
+  for (let i = 0; i < count; i++) queue.push(!boss && n >= 4 && i % 6 === 5 ? 'heavy' : n >= 2 && Math.random() < Math.min(0.2 + n * 0.0125, 0.45) ? 'ram' : 'scout');
+  spawnT = 1.2; announce(`第${n}波`, boss ? '統括機が接近中　撃ち落とせ' : n === 2 ? '突撃機に注意　近づく前に撃て' : n === 4 ? '重装機が接近中' : 'ドローン接近'); sfx.wave();
 }
 function clearField() {
   while (enemies.length) killEnemy(enemies[0], true);
@@ -1256,7 +1270,7 @@ function clearField() {
 function resetGame() {
   clearField();
   P.x = MAP.start[0]; P.z = MAP.start[1]; P.y = 0; P.vy = 0; P.ey = EYEH; P.yaw = 0; P.pitch = 0; P.hp = 100; score = 0; refill(); breakT = 0; hurtA = 0; dirA = 0;
-  startWave(1);
+  startWave(Math.max(1, Math.min(99, +new URLSearchParams(location.search).get('wave') | 0))); // ?wave=20 starts there, for trying a later wave
 }
 function damage(d, sx, sz) {
   if (state !== 'play') return;
@@ -1313,7 +1327,7 @@ function fire() {
       marked = true; fx(hx, hy, hz, 0.9, '#ffe2b0', 0.1);
       const fall = tHit <= r0 ? 1 : tHit >= r1 ? fm : 1 - (1 - fm) * (tHit - r0) / (r1 - r0);
       if (pvp) net.dm[hitE.peer] = Math.round(((net.dm[hitE.peer] || 0) + W.pd * fall * (head ? 1.4 : 1)) * 10) / 10; // the victim's page applies it
-      else if ((hitE.flash = 0.09, hitE.hp -= W.dmg * fall) <= 0) { score += hitE.T.score; if (Math.random() < (P.hp < 45 ? 0.38 : 0.14)) dropPickup(hitE.x, hitE.z); killEnemy(hitE); }
+      else if ((hitE.flash = 0.09, hitE.hp -= W.dmg * fall) <= 0) { const boss = hitE.type === 'boss'; score += hitE.T.score; if (boss || Math.random() < (P.hp < 45 ? 0.38 : 0.14)) dropPickup(hitE.x, hitE.z); killEnemy(hitE); if (boss) announce('統括機 撃破', `+${hitE.T.score}`); }
     } else if (tHit < 80) fx(hx, hy, hz, 0.7, COL.sodium, 0.09);
   }
   if (marked) { sfx.hit(); hudEl.hit.classList.remove('on'); void hudEl.hit.offsetWidth; hudEl.hit.classList.add('on'); }
@@ -1713,7 +1727,7 @@ function drawRadar() {
   const dot = (wx, wz, col, r) => { const dx = wx - P.x, dz = wz - P.z; let px = (dx * co - dz * s) * k, py = (-dx * s - dz * co) * k; const L = Math.hypot(px, py);
     if (L > R) { px *= R / L; py *= R / L; } rc.fillStyle = col; rc.beginPath(); rc.arc(c + px, c - py, r, 0, 7); rc.fill(); };
   for (const p of pickups) dot(p.x, p.z, COL.hull, 5);
-  for (const e of enemies) dot(e.x, e.z, e.type === 'ram' ? '#ffd23d' : COL.alarm, e.type === 'heavy' ? 8 : 5);
+  for (const e of enemies) dot(e.x, e.z, e.type === 'ram' ? '#ffd23d' : COL.alarm, e.type === 'boss' ? 12 : e.type === 'heavy' ? 8 : 5);
   if (pvp) for (const r of liveRemotes) if (time - r.lastShot < 2.5) dot(r.x, r.z, VS[r.c][1], 6); // rivals show only after firing
 }
 
@@ -1747,9 +1761,9 @@ function update(dt) {
   if (firing || mouseFire || (cfg.auto && lockOn)) fire();
   if (pvp) { vsSync(dt); return; }
   // spawning and waves
-  if (queue.length) { spawnT -= dt; if (spawnT <= 0 && enemies.length < Math.min(7 + wave, 14)) { spawnEnemy(queue.shift()); spawnT = Math.max(0.45, 1.5 - wave * 0.08); } }
+  if (queue.length) { spawnT -= dt; if (spawnT <= 0 && enemies.length < Math.min(4 + (wave / 3 | 0), 10)) { spawnEnemy(queue.shift()); spawnT = Math.max(0.6, 1.5 - wave * 0.045); } }
   else if (!enemies.length) {
-    if (breakT <= 0) { breakT = 3.4; score += wave * 100; P.hp = Math.min(100, P.hp + 15); announce(`第${wave}波 制圧`, `ボーナス +${wave * 100}　体力 +15`); }
+    if (breakT <= 0) { breakT = 3.4; score += wave * 100; P.hp = Math.min(100, P.hp + 20); announce(`第${wave}波 制圧`, `ボーナス +${wave * 100}　体力 +20`); }
     else { breakT -= dt; if (breakT <= 0) startWave(wave + 1); }
   }
   // drones
@@ -1764,16 +1778,18 @@ function update(dt) {
     if (Math.abs(e.x) > MAP.dx || Math.abs(e.z) > MAP.dz) { e.x = clamp(e.x, -MAP.dx, MAP.dx); e.z = clamp(e.z, -MAP.dz, MAP.dz); e.orbit *= -1; }
     for (const o of enemies) { if (o === e) continue; const sx = e.x - o.x, sz = e.z - o.z, sd = Math.hypot(sx, sz), m = e.r + o.r + 0.3; if (sd < m && sd > 0.001) { e.x += sx / sd * (m - sd) * 0.5; e.z += sz / sd * (m - sd) * 0.5; } }
     e.g.position.set(e.x, e.y, e.z); e.g.lookAt(P.x, P.ey, P.z);
-    e.rotors[0].rotation.y = e.rotors[1].rotation.y = time * 40;
+    for (const r of e.rotors) r.rotation.y = time * 40;
     if (e.flash > 0) { e.flash -= dt; e.bodyMat.emissive.setHex(e.flash > 0 ? 0xffb347 : 0x000000); }
     if (e.type === 'ram') {
       if (Math.hypot(dx, e.y - P.ey + 0.3, dz) < 1.35) { const ex = e.x, ez = e.z; killEnemy(e); damage(15, ex, ez); if (state !== 'play') return; }
       continue;
     }
-    if (e.burst > 0) { e.bt -= dt; if (e.bt <= 0) { shootBolt(e, 8); e.burst--; e.bt = 0.2; } }
+    const boss = e.type === 'boss';
+    if (boss && (e.st -= dt) <= 0) { e.st = 8; if (enemies.length < 8) { spawnEnemy('ram', e); spawnEnemy('ram', e); } } // lets two rams go every 8 s, unless the air is already full
+    if (e.burst > 0) { e.bt -= dt; if (e.bt <= 0) { shootBolt(e, 8); e.burst--; e.bt = boss ? 0.14 : 0.2; } }
     e.cd -= dt;
     if (e.cd <= 0 && e.y < ty + 2) {
-      if (d < e.T.range + 10 && !blocked(e.x, e.y, e.z, P.x, P.ey - 0.3, P.z)) { if (e.type === 'heavy') { e.burst = 3; e.bt = 0; e.cd = 3.2; } else { shootBolt(e, 6); e.cd = Math.max(1.6, 3.1 - wave * 0.09) + Math.random() * 1.2; } }
+      if (d < e.T.range + 10 && !blocked(e.x, e.y, e.z, P.x, P.ey - 0.3, P.z)) { if (boss) { e.burst = 5; e.bt = 0; e.cd = e.hp < e.max / 2 ? 2.6 : 3.6; } else if (e.type === 'heavy') { e.burst = 3; e.bt = 0; e.cd = 3.2; } else { shootBolt(e, 6); e.cd = Math.max(1.6, 3.1 - wave * 0.045) + Math.random() * 1.2; } }
       else e.cd = 0.35;
     }
   }
@@ -1842,6 +1858,7 @@ function frame(now) {
     hudT = 0.05; const hp = Math.ceil(P.hp);
     hudEl.hpNum.textContent = hp; hudEl.hpFill.style.width = hp + '%'; hudEl.hpFill.style.background = hp < 35 ? COL.alarm : COL.hull;
     hudEl.wave.textContent = wave; hudEl.left.textContent = enemies.length + queue.length; hudEl.score.textContent = score;
+    const bs = !pvp && enemies.find(e => e.type === 'boss'); hudEl.bossRow.hidden = !bs; if (bs) hudEl.bossFill.style.width = Math.max(0, bs.hp / bs.max * 100) + '%';
     hudEl.ammo.textContent = reloadT > 0 ? '装填中' : ammo; hudEl.ammo.classList.toggle('low', reloadT <= 0 && ammo <= W.mag / 4);
     hudEl.hurt.style.opacity = Math.min(0.85, hurtA + (hp < 30 ? 0.25 : 0));
     if (pvp && vsBoard(vsBoardEl, innerHeight < 500 ? 4 : 8)) killLogEl.style.top = vitalsEl.offsetTop + vitalsEl.offsetHeight + 6 + 'px'; // the kill feed sits right under the standings
