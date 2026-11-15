@@ -1259,7 +1259,7 @@ function startWave(n) {
   wave = n; queue = [];
   const boss = n % BOSS_EVERY === 0, count = boss ? 6 : Math.min(4 + n, 24); // a boss wave: the boss, a few escorts, and the rams it lets go
   if (boss) queue.push('boss');
-  for (let i = 0; i < count; i++) queue.push(!boss && n >= 4 && i % 6 === 5 ? 'heavy' : n >= 2 && Math.random() < Math.min(0.2 + n * 0.0125, 0.45) ? 'ram' : 'scout');
+  for (let i = 0; i < count; i++) queue.push(!boss && n >= 4 && i % 6 === 5 ? 'heavy' : n >= 2 && Math.random() < Math.min(0.133 + n * 0.0083, 0.3) ? 'ram' : 'scout');
   spawnT = 1.2; announce(`第${n}波`, boss ? '統括機が接近中　撃ち落とせ' : n === 2 ? '突撃機に注意　近づく前に撃て' : n === 4 ? '重装機が接近中' : 'ドローン接近'); sfx.wave();
 }
 function clearField() {
