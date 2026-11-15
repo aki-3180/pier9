@@ -1327,7 +1327,7 @@ function fire() {
       marked = true; fx(hx, hy, hz, 0.9, '#ffe2b0', 0.1);
       const fall = tHit <= r0 ? 1 : tHit >= r1 ? fm : 1 - (1 - fm) * (tHit - r0) / (r1 - r0);
       if (pvp) net.dm[hitE.peer] = Math.round(((net.dm[hitE.peer] || 0) + W.pd * fall * (head ? 1.4 : 1)) * 10) / 10; // the victim's page applies it
-      else if ((hitE.flash = 0.09, hitE.hp -= W.dmg * fall) <= 0) { const boss = hitE.type === 'boss'; score += hitE.T.score; if (boss || Math.random() < (P.hp < 45 ? 0.38 : 0.14)) dropPickup(hitE.x, hitE.z); killEnemy(hitE); if (boss) announce('統括機 撃破', `+${hitE.T.score}`); }
+      else if ((hitE.flash = 0.09, hitE.hp -= W.dmg * fall) <= 0) { const boss = hitE.type === 'boss'; score += hitE.T.score; if (boss || Math.random() < (P.hp < 45 ? 0.38 : 0.14) + (wave - 1) * 0.005) dropPickup(hitE.x, hitE.z); killEnemy(hitE); if (boss) announce('統括機 撃破', `+${hitE.T.score}`); }
     } else if (tHit < 80) fx(hx, hy, hz, 0.7, COL.sodium, 0.09);
   }
   if (marked) { sfx.hit(); hudEl.hit.classList.remove('on'); void hudEl.hit.offsetWidth; hudEl.hit.classList.add('on'); }
