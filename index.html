@@ -162,10 +162,26 @@ body.vs #chatBtn{display:grid}
 #killLog i{font-style:normal;color:var(--steel);margin:0 6px}
 @keyframes klog{0%{opacity:0;transform:translateX(-8px)}4%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
 #vsNote{margin:0;font-size:12px;line-height:1.6;color:var(--steel)}
-#vsRow{display:none;gap:10px;align-items:baseline;font-size:13px;font-weight:700;flex-wrap:wrap}
-#vsRow b{font-family:var(--f-data);font-size:15px;color:var(--sodium)}
-#vsDot{width:10px;height:10px;border-radius:50%;align-self:center}
-body.vs #vsRow{display:flex}
+/* versus standings: one row per player, best first, own row lit. The same table is the small one in play and the full one on the pause sheet */
+.board{border-collapse:collapse;width:max-content;max-width:100%;font-size:13px;font-weight:700;line-height:1.25;background:var(--panel);border-radius:4px}
+.board th{font-size:10px;letter-spacing:.08em;color:var(--steel);font-weight:700;padding:3px 7px;text-align:right;white-space:nowrap}
+.board th:first-child{text-align:left}
+.board td{padding:2px 7px;white-space:nowrap}
+.board td.rk{font-family:var(--f-data);color:var(--steel);text-align:right;padding-right:0}
+.board td.nm{max-width:12em;overflow:hidden;text-overflow:ellipsis}
+.board td.nm i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.board td.k,.board td.d{font-family:var(--f-data);font-variant-numeric:tabular-nums;text-align:right;min-width:2.2em}
+.board td.k{font-size:15px;color:var(--sodium)}
+.board td.d{color:var(--steel)}
+.board tr.me td{background:rgba(255,179,71,.2)}
+.board tr.me td.rk,.board tr.me td.d{color:var(--signal)}
+#vsBoard{display:none}
+body.vs #vsBoard{display:table}
+#vsTable{font-size:16px}
+#vsTable th{font-size:11px;padding:6px 12px}
+#vsTable td{padding:5px 12px}
+#vsTable td.rk{padding-right:0}
+#vsTable td.k{font-size:19px}
 body.vs #waveRow,body.vs #scoreBox{display:none}
 body.vs:not(.editing) #swapBtn{display:none}
 #roomCode[readonly]{color:var(--sodium);border-color:var(--sodium)}
@@ -222,7 +238,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
     <div id="hpRow"><span class="label">体力</span><span id="hpNum" class="data">100</span></div>
     <div id="hpBar"><div id="hpFill"></div></div>
     <div id="waveRow"><span>第<b id="waveNum">1</b>波</span><span class="label">残り <b id="leftNum">0</b> 機</span></div>
-    <div id="vsRow"><i id="vsDot"></i><span>撃破 <b id="vsK">0</b></span><span>被撃破 <b id="vsD">0</b></span><span class="label">参加 <b id="vsN">1</b> 人</span></div>
+    <table id="vsBoard" class="board"></table>
   </div>
   <div id="killLog" aria-live="polite"></div>
   <div id="topRight">
@@ -258,6 +274,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
       <div class="eyebrow" id="eyebrow">夜勤警備 ／ 9番バース</div>
       <h1 id="heading">第九<span>埠頭</span></h1>
       <p id="lead"></p>
+      <table id="vsTable" class="board" hidden></table>
       <div id="stats" hidden>
         <div><span class="label">得点</span><b id="stScore">0</b></div>
         <div><span class="label">到達</span><b id="stWave">1</b></div>
@@ -1420,10 +1437,10 @@ function show(mode) {
   const inRoom = mode === 'pause' && pvp && standalone && !!room; // paused in a match: show which room this is, so it can be passed on
   $('vsBtn').hidden = mode !== 'menu'; $('vsNote').hidden = $('roomRow').hidden = !(inRoom || mode === 'menu' && standalone); if (mode === 'menu' && !standalone) $('vsNote').hidden = false;
   $('nameRow').hidden = $('mapRow').hidden = mode !== 'menu'; roomInput.readOnly = mode !== 'menu'; if (inRoom) { roomInput.value = room.code; vsNote.textContent = 'この部屋コードを入れた人が相手になります。招待リンクを送れば、コード入力なしで入れます。'; } $('quitBtn').hidden = mode === 'menu' || mode === 'play';
-  $('quitBtn').textContent = pvp ? '対戦をやめる' : 'タイトルへ戻る';
+  $('quitBtn').textContent = pvp ? '対戦をやめる' : 'タイトルへ戻る'; $('vsTable').hidden = !(mode === 'pause' && pvp);
   if (mode === 'menu') { titleText(); $('heading').innerHTML = '第九<span>埠頭</span>'; $('lead').hidden = false; $('stats').hidden = true; $('go').textContent = '勤務開始'; }
   if (mode === 'pause') { $('eyebrow').textContent = pvp ? `${room && room.code ? `部屋 ${room.code} ／ ` : ''}撃破 ${net.k} ／ 被撃破 ${net.d}` : `第${wave}波 ／ 得点 ${score}`; $('heading').textContent = pvp ? '離席中' : '一時停止';
-    $('lead').hidden = !pvp; if (pvp) $('lead').textContent = vsRanking(); $('stats').hidden = true; $('go').textContent = '再開する'; }
+    $('lead').hidden = !pvp; if (pvp) { $('lead').textContent = '離席中は相手から見えず、撃たれません。'; vsBoard($('vsTable'), 99); } $('stats').hidden = true; $('go').textContent = '再開する'; }
   if (mode === 'over') { $('eyebrow').textContent = score >= best && score > 0 ? '自己最高を更新' : (MAP.day ? '日勤警備 ／ ' : '夜勤警備 ／ ') + MAP.tag; $('heading').textContent = '勤務終了'; $('lead').hidden = true; $('stats').hidden = false;
     $('stScore').textContent = score; $('stWave').textContent = `第${wave}波`; $('stBest').textContent = best; $('go').textContent = 'もう一度'; }
 }
@@ -1472,7 +1489,7 @@ function needName() { // versus cannot start without a name
   if (!myName) { nameInput.classList.add('need'); vsNote.textContent = '対戦には名前が必要です。名前を入れてから、もう一度押してください。'; nameInput.focus(); return false; }
   store.set('name', myName); return true;
 }
-const killLogEl = $('killLog');
+const killLogEl = $('killLog'), vsBoardEl = $('vsBoard'), vitalsEl = $('vitals');
 function killLog(kn, kc, vn, vc) {
   const row = document.createElement('div'), a = document.createElement('span'), m = document.createElement('i'), b = document.createElement('span');
   a.textContent = kn; a.style.color = kc; m.textContent = '▸'; b.textContent = vn; b.style.color = vc; row.append(a, m, b);
@@ -1569,17 +1586,27 @@ function vsSync(dt, immune) { // immune: catch up on the room without taking dam
     if (!net.pick && net.dead <= 0) { vsRespawn(); announce(`マップ：${MAP.name}`, '部屋のマップに合わせました'); } net.sendT = 0; }
   for (const [id, r] of remotes) if (!here.has(id)) { scene.remove(r.g); r.mat.dispose(); r.lamp.material.dispose(); remotes.delete(id); }
   let clash = net.c < 0; for (const r of remotes.values()) if (r.c === net.c && myPeer && r.peer < myPeer) clash = true;
-  if (clash) { let c = 0; while (used.has(c) && c < VS.length - 1) c++; net.c = c; $('vsDot').style.background = VS[c][1]; }
+  if (clash) { let c = 0; while (used.has(c) && c < VS.length - 1) c++; net.c = c; }
   if (hitter) {
     hurtFrom(hitter.x, hitter.z);
     if (P.hp <= 0) { P.hp = 0; net.dead = 3; net.d++; net.lk = hitter.peer; setAim(false); pickI = wi; killLog(hitter.name, VS[hitter.c][1], myName, myCol()); pickShow(`${hitter.name}に撃たれた`, '3秒で復帰。武器を替えるなら今選ぶ' + (touchMode ? '' : '（1〜5 キー）')); sfx.boom(); net.sendT = 0; }
   } else if (net.dead > 0 && !immune) { net.dead -= dt; if (net.dead <= 0) { vsRespawn(); net.sendT = 0; } }
   if ((net.sendT -= dt) <= 0) { net.sendT = 1 / 15; vsSend(net.dead > 0 || net.pick ? 0 : 1); }
 }
-function vsRanking() {
-  const rows = [[`${myName}（あなた）`, net.k]]; for (const r of remotes.values()) rows.push([r.name, r.k]);
-  rows.sort((a, b) => b[1] - a[1]);
-  return '撃破数　' + rows.map((r, i) => `${i + 1}. ${r[0]} ${r[1]}`).join('　') + '　　離席中は相手から見えず、撃たれません。';
+// Standings: most kills first, then fewest deaths. Equal kills share a rank. When there are more players than rows, the last row is always our own.
+function vsBoard(el, limit) {
+  const all = [{ n: myName, c: myCol(), k: net.k, d: net.d, me: 1 }]; for (const r of remotes.values()) all.push({ n: r.name, c: r.c >= 0 ? VS[r.c][1] : COL.steel, k: r.k, d: r.d, me: 0 });
+  all.sort((a, b) => b.k - a.k || a.d - b.d || b.me - a.me); for (const r of all) r.rk = 1 + all.filter(o => o.k > r.k).length;
+  let rows = all; if (all.length > limit) { rows = all.slice(0, limit); if (!rows.some(r => r.me)) rows[limit - 1] = all.find(r => r.me); }
+  const sig = all.length + '|' + rows.map(r => [r.rk, r.n, r.c, r.k, r.d, r.me].join(',')).join('|'); if (el._sig === sig) return false; el._sig = sig;
+  const cell = (tr, tag, cls, text) => { const c = document.createElement(tag); c.className = cls; c.textContent = text; tr.append(c); return c; };
+  const head = document.createElement('tr'); cell(head, 'th', '', `順位（${all.length}人）`).colSpan = 2; cell(head, 'th', '', '撃破'); cell(head, 'th', '', '被撃破');
+  el.textContent = ''; el.append(head);
+  for (const r of rows) {
+    const tr = document.createElement('tr'), dot = document.createElement('i'); if (r.me) tr.className = 'me';
+    cell(tr, 'td', 'rk', r.rk); const nm = cell(tr, 'td', 'nm', r.n); dot.style.background = r.c; nm.prepend(dot); cell(tr, 'td', 'k', r.k); cell(tr, 'td', 'd', r.d); el.append(tr);
+  }
+  return true;
 }
 function vsLeave() {
   if (room) room.presence({ pv: null }).catch(() => {});
@@ -1817,7 +1844,7 @@ function frame(now) {
     hudEl.wave.textContent = wave; hudEl.left.textContent = enemies.length + queue.length; hudEl.score.textContent = score;
     hudEl.ammo.textContent = reloadT > 0 ? '装填中' : ammo; hudEl.ammo.classList.toggle('low', reloadT <= 0 && ammo <= W.mag / 4);
     hudEl.hurt.style.opacity = Math.min(0.85, hurtA + (hp < 30 ? 0.25 : 0));
-    if (pvp) { $('vsK').textContent = net.k; $('vsD').textContent = net.d; $('vsN').textContent = remotes.size + 1; }
+    if (pvp && vsBoard(vsBoardEl, innerHeight < 500 ? 4 : 8)) killLogEl.style.top = vitalsEl.offsetTop + vitalsEl.offsetHeight + 6 + 'px'; // the kill feed sits right under the standings
     hudEl.dmg.style.opacity = dirA; hudEl.dmg.style.transform = `rotate(${dirAng}rad)`;
     drawRadar();
   }
