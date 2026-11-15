@@ -1156,7 +1156,7 @@ const G = {
 };
 const rotorMat = new THREE.MeshBasicMaterial({ color: 0x9fb0c8, transparent: true, opacity: 0.28, depthWrite: false });
 const enemies = [];
-const BOSS_EVERY = 20;
+const BOSS_FROM = 20, BOSS_EVERY = 5; // a boss on wave 20, then on every fifth wave
 function spawnEnemy(type, from) { // from: a boss letting this one go from its own belly
   const T = TYPES[type], g = new THREE.Group();
   const bodyMat = new THREE.MeshLambertMaterial({ color: type === 'ram' ? 0x5a3a22 : type === 'heavy' ? 0x3a2f48 : type === 'boss' ? 0x4a2226 : 0x394454, emissive: 0x000000 });
@@ -1173,7 +1173,7 @@ function spawnEnemy(type, from) { // from: a boss letting this one go from its o
   }
   g.scale.setScalar(T.scale);
   const side = MAP.sides[Math.random() * MAP.sides.length | 0], a = Math.random() * 2 - 1;
-  const e = { type, T, g, bodyMat, rotors, hp: type === 'boss' ? T.hp * Math.max(1, wave / BOSS_EVERY) : T.hp * (1 + wave * 0.02), r: T.r, st: 6,
+  const e = { type, T, g, bodyMat, rotors, hp: type === 'boss' ? T.hp * Math.max(1, wave / BOSS_FROM) : T.hp * (1 + wave * 0.02), r: T.r, st: 6,
     x: from ? from.x + Math.random() * 2 - 1 : side < 2 ? a * MAP.dx : side === 2 ? -MAP.dx : MAP.dx, z: from ? from.z + Math.random() * 2 - 1 : side === 0 ? -MAP.dz : side === 1 ? MAP.dz : a * MAP.dz, y: from ? from.y - 1.5 : 11,
     vx: 0, vz: 0, orbit: Math.random() < 0.5 ? 1 : -1, ph: Math.random() * 6, cd: 2.5 + Math.random() * 2, burst: 0, bt: 0, flash: 0,
     speed: T.speed * (1 + Math.min(wave, 20) * 0.0125) };
@@ -1257,7 +1257,7 @@ const hudEl = { hpNum: $('hpNum'), hpFill: $('hpFill'), wave: $('waveNum'), left
 function announce(big, small) { const a = hudEl.ann; a.innerHTML = ''; a.append(big); if (small) { const s = document.createElement('small'); s.textContent = small; a.append(s); } a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
 function startWave(n) {
   wave = n; queue = [];
-  const boss = n % BOSS_EVERY === 0, count = boss ? 6 : Math.min(4 + n, 24); // a boss wave: the boss, a few escorts, and the rams it lets go
+  const boss = n >= BOSS_FROM && n % BOSS_EVERY === 0, count = boss ? 6 : Math.min(4 + n, 24); // a boss wave: the boss, a few escorts, and the rams it lets go
   if (boss) queue.push('boss');
   for (let i = 0; i < count; i++) queue.push(!boss && n >= 4 && i % 6 === 5 ? 'heavy' : n >= 2 && Math.random() < Math.min(0.133 + n * 0.0083, 0.3) ? 'ram' : 'scout');
   spawnT = 1.2; announce(`第${n}波`, boss ? '統括機が接近中　撃ち落とせ' : n === 2 ? '突撃機に注意　近づく前に撃て' : n === 4 ? '重装機が接近中' : 'ドローン接近'); sfx.wave();
