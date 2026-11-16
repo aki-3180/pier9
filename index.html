@@ -52,8 +52,8 @@ body{background:var(--night);color:var(--signal);font-family:var(--f-body);overf
 #waveRow b{font-family:var(--f-data);font-size:15px;color:var(--sodium)}
 #bossRow{display:flex;flex-direction:column;gap:4px;margin-top:2px}
 #bossRow[hidden]{display:none}
-#bossBar{height:6px;background:rgba(238,242,234,.14);transform:skewX(-18deg);overflow:hidden}
-#bossFill{height:100%;width:100%;background:var(--alarm);transition:width .15s}
+.bossBar{height:6px;background:rgba(238,242,234,.14);transform:skewX(-18deg);overflow:hidden}
+.bossFill{height:100%;width:100%;background:var(--alarm);transition:width .15s}
 
 /* top-right: score, radar, pause */
 #topRight{top:calc(10px + var(--sat));right:var(--sar);display:flex;gap:10px;align-items:flex-start}
@@ -325,7 +325,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
     <div id="hpRow"><span class="label">体力</span><span id="hpNum" class="data">100</span></div>
     <div id="hpBar"><div id="hpFill"></div></div>
     <div id="waveRow"><span>第<b id="waveNum">1</b>波</span><span class="label">残り <b id="leftNum">0</b> 機</span></div>
-    <div id="bossRow" hidden><span class="label" id="bossName">統括機</span><div id="bossBar"><div id="bossFill"></div></div></div>
+    <div id="bossRow" hidden><span class="label" id="bossName">統括機</span><div class="bossBar"><div id="bossFill" class="bossFill"></div></div><span class="label" id="bossName2" hidden></span><div class="bossBar" id="bossBar2" hidden><div id="bossFill2" class="bossFill"></div></div></div>
     <table id="vsBoard" class="board"></table>
   </div>
   <div id="killLog" aria-live="polite"></div>
@@ -1299,7 +1299,7 @@ function spawnEnemy(type, from, rep) { // from: a boss letting this one go from 
   }
   g.scale.setScalar(T.scale);
   const side = MAP.sides[Math.random() * MAP.sides.length | 0], a = Math.random() * 2 - 1;
-  const e = { id: rep ? rep[0] : newId(), type, T, g, bodyMat, rotors, eg, hp: T.boss ? T.hp * bossScale() : T.hp * (1 + wave * 0.02), r: T.r, st: 6,
+  const e = { id: rep ? rep[0] : newId(), type, T, g, bodyMat, rotors, eg, hp: T.boss ? T.hp * bossScale() * (coop && type === 'charge' ? 1.2 : 1) : T.hp * (1 + wave * 0.02), r: T.r, st: 6,
     x: from ? from.x + Math.random() * 2 - 1 : side < 2 ? a * MAP.dx : side === 2 ? -MAP.dx : MAP.dx, z: from ? from.z + Math.random() * 2 - 1 : side === 0 ? -MAP.dz : side === 1 ? MAP.dz : a * MAP.dz, y: from ? from.y - 1.5 : T.boss ? 26 : 11,
     vx: 0, vz: 0, orbit: Math.random() < 0.5 ? 1 : -1, ph: Math.random() * 6, cd: 2.5 + Math.random() * 2, burst: 0, bt: 0, flash: 0, tg: null, tgT: 0, ch: 0, chT: 0, half: false, tgn: 0,
     speed: T.speed * (1 + Math.min(wave, 20) * 0.0125) };
@@ -1411,7 +1411,7 @@ function setWeapon(i, quiet) {
 }
 function refill() { WEAPONS.forEach((w, i) => { mags[i] = w.mag; cds[i] = 0; }); ammo = W.mag; reloadT = fireCd = swapT = 0; setAim(false); }
 let queue = [], spawnT = 0, breakT = 0, time = 0, hurtA = 0, dirA = 0, dirAng = 0;
-const hudEl = { hpNum: $('hpNum'), hpFill: $('hpFill'), wave: $('waveNum'), left: $('leftNum'), score: $('score'), ammo: $('ammo'), cross: $('cross'), hit: $('hit'), hurt: $('hurt'), dmg: $('dmgDir'), ann: $('announce'), bossRow: $('bossRow'), bossFill: $('bossFill'), bossName: $('bossName') };
+const hudEl = { hpNum: $('hpNum'), hpFill: $('hpFill'), wave: $('waveNum'), left: $('leftNum'), score: $('score'), ammo: $('ammo'), cross: $('cross'), hit: $('hit'), hurt: $('hurt'), dmg: $('dmgDir'), ann: $('announce'), bossRow: $('bossRow'), bossFill: $('bossFill'), bossName: $('bossName'), bossName2: $('bossName2'), bossBar2: $('bossBar2'), bossFill2: $('bossFill2') };
 function announce(big, small) { const a = hudEl.ann; a.innerHTML = ''; a.append(big); if (small) { const s = document.createElement('small'); s.textContent = small; a.append(s); } a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
 /* damage numbers: one per target, at the last point hit, rising and fading. Hits on the same target within half a second add up,
    so a burst reads as one growing number (and a shotgun's pellets as one). Gold when the head was in it. */
@@ -1438,15 +1438,19 @@ const isBossWave = n => coop || (n >= BOSS_FROM && n % BOSS_EVERY === 0);
 // which boss: in co-op the four take turns from wave 1; alone the overseer comes first on wave 20, then the others every fifth wave
 const bossFor = n => coop ? BOSSES[(n - 1) % 4] : ['boss', 'spread', 'charge', 'sniper'][((n - BOSS_FROM) / BOSS_EVERY | 0) % 4];
 const crowd = () => coop ? 1 + remotes.size : 1; // players facing the drones
-function waveAnnounce(n) { announce(`第${n}波`, isBossWave(n) ? `${TYPES[bossFor(n)].name}が接近中` : n === 2 ? '突撃機に注意　近づく前に撃て' : n === 4 ? '重装機が接近中' : 'ドローン接近'); sfx.wave(); }
+const TWIN_FROM = 13; // co-op: from this wave on, two different bosses picked at random each wave
+function waveAnnounce(n, bs) { // bs: the bosses of this wave (the flying page picks them and passes them on)
+  announce(`第${n}波`, bs && bs.length ? bs.map(b => TYPES[b].name).join('と') + 'が接近中' : n === 2 ? '突撃機に注意　近づく前に撃て' : n === 4 ? '重装機が接近中' : 'ドローン接近'); sfx.wave();
+}
 function startWave(n) {
   wave = n; queue = [];
-  // a boss wave alone: the boss and a few escorts. In co-op: the boss and six tenths of an ordinary wave; every extra player brings half a wave more
-  const boss = isBossWave(n), np = crowd(), plain = Math.min(Math.round(Math.min(4 + n, 24) * (1 + 0.5 * (np - 1))), 48);
-  const count = !boss ? plain : coop ? Math.max(2, Math.round(plain * 0.6)) : 6 + 2 * (np - 1);
-  if (boss) queue.push(bossFor(n));
+  // a boss wave alone: the boss and a few escorts. In co-op: the boss and six tenths of an ordinary wave (two bosses and two thirds of that from wave 13); every extra player brings half a wave more
+  const boss = isBossWave(n), np = crowd(), plain = Math.min(Math.round(Math.min(4 + n, 24) * (1 + 0.5 * (np - 1))), 48), twin = coop && n >= TWIN_FROM;
+  const count = !boss ? plain : coop ? Math.max(2, Math.round(plain * 0.6 * (twin ? 2 / 3 : 1))) : 6 + 2 * (np - 1);
+  const bs = !boss ? [] : twin ? BOSSES.slice().sort(() => Math.random() - 0.5).slice(0, 2) : [bossFor(n)];
+  queue.push(...bs);
   for (let i = 0; i < count; i++) queue.push((!boss || coop) && n >= 4 && i % 6 === 5 ? 'heavy' : n >= 2 && Math.random() < Math.min(0.133 + n * 0.0083, 0.3) ? 'ram' : 'scout');
-  spawnT = 1.2; waveAnnounce(n); if (coop) net.ev.push(['w', n]);
+  spawnT = 1.2; waveAnnounce(n, bs); if (coop) net.ev.push(['w', n, ...bs.map(b => TYPEK.indexOf(b))]);
 }
 function waveClear(n) { // the wave is down: everyone standing gets 20 back, and in co-op the fallen come back
   if (coop && net.dead > 0) { coopSpawn(); announce(`第${n}波 制圧`, '復帰した'); sfx.pick(); net.sendT = 0; }
@@ -1892,7 +1896,7 @@ function coopTake(r, s) { // the co-op part of one message from another page
     const e = enemies.find(o => o.id === num(v[0])); if (e && !net.auth) killEnemy(e);
   }
   if (r.n === net.authN && !net.auth) {
-    if (Array.isArray(s.ev)) for (const v of s.ev.slice(0, 8)) { if (!Array.isArray(v)) continue; const n = num(v[1]) | 0; if (v[0] === 'w') { waveAnnounce(n); net.spent.clear(); } else if (v[0] === 'c') waveClear(n); else if (v[0] === 'x') blast(clamp(num(v[1]), -150, 150), clamp(num(v[2]), -2, 40), clamp(num(v[3]), -150, 150)); }
+    if (Array.isArray(s.ev)) for (const v of s.ev.slice(0, 8)) { if (!Array.isArray(v)) continue; const n = num(v[1]) | 0; if (v[0] === 'w') { waveAnnounce(n, v.slice(2, 4).map(i => TYPEK[num(i) | 0]).filter(t => t && TYPES[t].boss)); net.spent.clear(); } else if (v[0] === 'c') waveClear(n); else if (v[0] === 'x') blast(clamp(num(v[1]), -150, 150), clamp(num(v[2]), -2, 40), clamp(num(v[3]), -150, 150)); }
     if (s.w !== undefined) { applySnap(s); net.snap = true; }
   }
   if (net.auth) {
@@ -2435,7 +2439,9 @@ function frame(now) {
     hudT = 0.05; const hp = Math.ceil(P.hp);
     hudEl.hpNum.textContent = hp; hudEl.hpFill.style.width = hp + '%'; hudEl.hpFill.style.background = hp < 35 ? COL.alarm : COL.hull;
     hudEl.wave.textContent = wave; hudEl.left.textContent = enemies.length + queue.length; hudEl.score.textContent = score;
-    const bs = !pvp && enemies.find(e => e.T.boss); hudEl.bossRow.hidden = !bs; if (bs) { hudEl.bossFill.style.width = Math.max(0, bs.hp / bs.max * 100) + '%'; if (hudEl.bossName.textContent !== bs.T.name) hudEl.bossName.textContent = bs.T.name; }
+    const bs = pvp ? [] : enemies.filter(e => e.T.boss).slice(0, 2); hudEl.bossRow.hidden = !bs.length; // up to two bars
+    bs.forEach((b, i) => { const f = i ? hudEl.bossFill2 : hudEl.bossFill, n = i ? hudEl.bossName2 : hudEl.bossName; f.style.width = Math.max(0, b.hp / b.max * 100) + '%'; if (n.textContent !== b.T.name) n.textContent = b.T.name; });
+    hudEl.bossName2.hidden = hudEl.bossBar2.hidden = bs.length < 2;
     hudEl.ammo.textContent = reloadT > 0 ? '装填中' : ammo; hudEl.ammo.classList.toggle('low', reloadT <= 0 && ammo <= W.mag / 4);
     hudEl.hurt.style.opacity = Math.min(0.85, hurtA + (hp < 30 ? 0.25 : 0));
     if (online && vsBoard(vsBoardEl, innerHeight < 500 ? 4 : 8)) killLogEl.style.top = vitalsEl.offsetTop + vitalsEl.offsetHeight + 6 + 'px'; // the kill feed sits right under the standings
