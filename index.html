@@ -181,11 +181,26 @@ body.online #chatBtn{display:grid}
 .board td.d{color:var(--steel)}
 .board tr.me td{background:rgba(255,179,71,.2)}
 .board tr.me td.rk,.board tr.me td.d{color:var(--signal)}
-.board tr.team td{border-top:1px solid var(--line);font-size:12px;letter-spacing:.06em}
-.board tr.team td.k{font-size:16px}
-.board tr.team td.nm b{font-weight:700}
-#vsBoard{display:none}
+.board tr.tm td{border-top:1px solid var(--line);font-size:12px;letter-spacing:.06em}
+.board tr.tm td.k{font-size:16px}
+.board tr.tm td.nm b{font-weight:700}
+/* the small one in play: as wide as the health bar, tight rows, the own row marked by a bar on its left rather than a block of colour */
+#vsBoard{display:none;table-layout:fixed;width:100%;font-size:12px;line-height:1.2;background:rgba(5,8,15,.58);text-shadow:0 1px 1px rgba(5,8,15,.8)}
 body.online #vsBoard{display:table}
+#vsBoard col.rk{width:22px} #vsBoard col.k{width:30px} #vsBoard col.d{width:38px}
+#vsBoard th{font-size:9px;letter-spacing:.04em;padding:3px 6px 2px 0}
+#vsBoard th:first-child{padding-left:7px}
+#vsBoard td{padding:2px 6px 2px 0;height:15px}
+#vsBoard td.rk{font-size:10px;text-align:center;padding:2px 0}
+#vsBoard td.nm{max-width:none}
+#vsBoard td.nm i{width:7px;height:7px;margin-right:5px;vertical-align:1px}
+#vsBoard td.k{font-size:13px;min-width:0}
+#vsBoard td.d{font-size:11px;min-width:0}
+#vsBoard tr+tr td{border-top:1px solid rgba(238,242,234,.07)}
+#vsBoard tr.me td{background:rgba(255,179,71,.15)}
+#vsBoard tr.me td:first-child{box-shadow:inset 3px 0 var(--sodium)}
+#vsBoard tr.tm td{background:rgba(238,242,234,.08);font-size:11px}
+#vsBoard tr.tm td.k{font-size:14px}
 #vsTable{font-size:16px}
 #vsTable th{font-size:11px;padding:6px 12px}
 #vsTable td{padding:5px 12px}
@@ -1860,11 +1875,13 @@ function boardRows(all, limit, tp) { // limit: rows on the small board in play. 
 function drawBoard(el, all, rows, co) {
   const sig = all.length + '|' + (co ? 1 : 0) + '|' + rows.map(r => r.ps ? ['T', r.team, r.rk, r.k, r.d].join(',') : [r.rk, r.n, r.c, r.k, r.d, r.me].join(',')).join('|'); if (el._sig === sig) return false; el._sig = sig;
   const cell = (tr, tag, cls, text) => { const c = document.createElement(tag); c.className = cls; c.textContent = text; tr.append(c); return c; };
-  const head = document.createElement('tr'); cell(head, 'th', '', `順位（${all.length}人）`).colSpan = 2; cell(head, 'th', '', co ? '撃墜' : '撃破'); cell(head, 'th', '', co ? '倒れた' : '被撃破');
-  el.textContent = ''; el.append(head);
+  const small = el === vsBoardEl, head = document.createElement('tr'), cols = document.createElement('colgroup');
+  for (const c of ['rk', 'nm', 'k', 'd']) { const x = document.createElement('col'); x.className = c; cols.append(x); } // fixed widths, so the small board does not jump as names change
+  cell(head, 'th', '', small ? `${all.length}人` : `順位（${all.length}人）`).colSpan = 2; cell(head, 'th', '', co ? '撃墜' : '撃破'); cell(head, 'th', '', co ? '倒れた' : '被撃破');
+  el.textContent = ''; el.append(cols, head);
   for (const r of rows) {
     const tr = document.createElement('tr'), dot = document.createElement('i');
-    if (r.ps) { tr.className = 'team'; cell(tr, 'td', 'rk', r.rk); const nm = cell(tr, 'td', 'nm', ''), b = document.createElement('b'); b.textContent = teamName(r.team); dot.style.background = COLORS[Math.max(0, r.team) % COLORS.length][1]; nm.append(dot, b); cell(tr, 'td', 'k', r.k); cell(tr, 'td', 'd', r.d); }
+    if (r.ps) { tr.className = 'tm'; cell(tr, 'td', 'rk', r.rk); const nm = cell(tr, 'td', 'nm', ''), b = document.createElement('b'); b.textContent = teamName(r.team); dot.style.background = COLORS[Math.max(0, r.team) % COLORS.length][1]; nm.append(dot, b); cell(tr, 'td', 'k', r.k); cell(tr, 'td', 'd', r.d); }
     else { if (r.me) tr.className = 'me'; cell(tr, 'td', 'rk', rows.some(o => o.ps) ? '' : r.rk); const nm = cell(tr, 'td', 'nm', r.n); dot.style.background = r.c; nm.prepend(dot); cell(tr, 'td', 'k', r.k); cell(tr, 'td', 'd', r.d); }
     el.append(tr);
   }
