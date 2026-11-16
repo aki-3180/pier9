@@ -51,7 +51,7 @@ export class Room extends DurableObject {
     let r = this.room;
     if (op === 'create') {
       if (r && this.members().length) return refuse('taken');
-      r = this.room = { code, mode: 0, map: Math.abs(parseInt(q.get('map'), 10) | 0) % MAPS, phase: 'lobby', g: 0, host: 0, seq: 0, members: {}, last: null };
+      r = this.room = { code, mode: 0, map: Math.abs(parseInt(q.get('map'), 10) | 0) % MAPS, phase: 'lobby', g: 0, host: 0, seq: 0, members: {}, last: null, lim: 0 };
     } else if (!r || !this.members().length) return refuse('nf');
     let m = r.members[id];
     if (!m) {
@@ -92,6 +92,7 @@ export class Room extends DurableObject {
         r.mode = v; place(r, ms.filter(o => o.slot >= 0).sort((a, b) => a.slot - b.slot)); break;
       }
       case 'map': { const v = d.v | 0; if (!host || !lobby || v < 0 || v >= MAPS || v === r.map) return; r.map = v; break; }
+      case 'lim': { const v = d.v | 0; if (!host || !lobby || v < 0 || v > 999 || v === (r.lim || 0)) return; r.lim = v; break; } // 対戦の勝利条件：このキル数で決着（0 はエンドレス）
       case 'rand': { // ホストだけ。つながっている全員を混ぜて、枠に振り分ける
         if (!host || !lobby) return;
         const list = ms.filter(o => !o.off);
@@ -102,7 +103,7 @@ export class Room extends DurableObject {
         if (!host || !lobby || !ms.some(o => o.slot >= 0 && !o.off)) return;
         r.phase = 'play'; r.g++; r.last = null; for (const o of ms) o.ig = o.slot >= 0 && !o.off ? 1 : 0; break;
       }
-      case 'end': case 'wipe': { // end：ホストが試合を終える。wipe：協力で全滅した（試合に出ている人なら誰でも）
+      case 'end': case 'wipe': { // end：ホストが試合を終える。wipe：協力で全滅した／対戦で勝利条件に届いた（試合に出ている人なら誰でも）
         if (lobby || (d.t === 'end' ? !host : !m.ig)) return;
         const res = JSON.stringify(d.res === undefined ? null : d.res);
         r.phase = 'lobby'; r.last = res.length < 1500 ? JSON.parse(res) : null; break;
@@ -156,7 +157,7 @@ export class Room extends DurableObject {
 
   send() {
     const r = this.room, ps = this.members().map(m => [m.n, m.name, m.slot, m.off ? 0 : 1, m.ig]);
-    const out = { t: 'room', code: r.code, mode: r.mode, map: r.map, phase: r.phase, g: r.g, host: r.host, last: r.last, ps, you: 0 };
+    const out = { t: 'room', code: r.code, mode: r.mode, map: r.map, phase: r.phase, g: r.g, host: r.host, last: r.last, lim: r.lim || 0, ps, you: 0 };
     for (const ws of this.ctx.getWebSockets()) {
       const i = this.who(ws), m = r.members[i.id]; if (!m || m.k !== i.k) continue;
       out.you = i.n; try { ws.send(JSON.stringify(out)); } catch (_) {}
