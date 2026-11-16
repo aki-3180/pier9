@@ -1,0 +1,2 @@
+# ルームサーバーは Cloudflare に置くもので、Vercel には載せない
+server/
