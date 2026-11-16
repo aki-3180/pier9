@@ -1246,7 +1246,7 @@ let fxI = 0;
 function fx(x, y, z, size, color, life) { const f = fxPool[fxI = (fxI + 1) % fxPool.length]; f.s.position.set(x, y, z); f.s.material.color.set(color); f.s.material.opacity = 1; f.size = size; f.life = f.max = life; f.s.visible = true; }
 const boltGeo = new THREE.SphereGeometry(0.16, 8, 6), boltMat = new THREE.MeshBasicMaterial({ color: 0xff6a4d, fog: false });
 const bolts = [];
-for (let i = 0; i < 40; i++) { const m = mk(boltGeo, boltMat, 0, -10, 0); m.visible = false; const g = glow(0xff4d3d, 1.1); m.add(g); bolts.push({ m, on: false, vx: 0, vy: 0, vz: 0, dmg: 0, life: 0 }); }
+for (let i = 0; i < 160; i++) { const m = mk(boltGeo, boltMat, 0, -10, 0); m.visible = false; const g = glow(0xff4d3d, 1.1); m.add(g); bolts.push({ m, on: false, vx: 0, vy: 0, vz: 0, dmg: 0, life: 0 }); }
 
 /* ---------- drones ---------- */
 const TYPES = {
@@ -1517,20 +1517,24 @@ function fire() {
   if (marked) { sfx.hit(); hudEl.hit.classList.remove('on'); void hudEl.hit.offsetWidth; hudEl.hit.classList.add('on'); }
   if (ammo === 0) startReload();
 }
-function launchBolt(x, y, z, vx, vy, vz, dmg, sx, sz) {
+function launchBolt(x, y, z, vx, vy, vz, dmg, sx, sz, size) { // size: how much bigger than an ordinary bolt, to the eye and to the hit
   const b = bolts.find(b => !b.on); if (!b) return;
-  b.on = true; b.life = 6; b.dmg = dmg; b.vx = vx; b.vy = vy; b.vz = vz; b.sx = sx; b.sz = sz; b.m.position.set(x, y, z); b.m.visible = true; sfx.bolt();
+  b.on = true; b.life = 6; b.dmg = dmg; b.vx = vx; b.vy = vy; b.vz = vz; b.sx = sx; b.sz = sz; b.size = size || 1; b.m.scale.setScalar(b.size); b.m.position.set(x, y, z); b.m.visible = true; sfx.bolt();
 }
-function shootAt(e, tx, ty, tz, dmg, sp) { // a bolt from drone e toward a point
+function shootAt(e, tx, ty, tz, dmg, sp, size) { // a bolt from drone e toward a point
   const dx = tx - e.x, dy = ty - e.y, dz = tz - e.z, L = Math.hypot(dx, dy, dz) || 1;
   const x = e.x + dx / L * e.r, z = e.z + dz / L * e.r, vx = dx / L * sp, vy = dy / L * sp, vz = dz / L * sp;
-  launchBolt(x, e.y, z, vx, vy, vz, dmg, e.x, e.z);
-  if (coop) net.bl.push([x, e.y, z, vx, vy, vz].map(v => Math.round(v * 100) / 100).concat(dmg, Math.round(e.x), Math.round(e.z))); // every page flies the bolt; each checks it against its own player
+  launchBolt(x, e.y, z, vx, vy, vz, dmg, e.x, e.z, size);
+  if (coop) net.bl.push([x, e.y, z, vx, vy, vz].map(v => Math.round(v * 100) / 100).concat(dmg, Math.round(e.x), Math.round(e.z), size || 1)); // every page flies the bolt; each checks it against its own player
 }
 function shootBolt(e, dmg, t) { shootAt(e, t.x + (Math.random() - 0.5) * 1.4, t.ey - 0.35, t.z + (Math.random() - 0.5) * 1.4, dmg, 11); } // t: the player it is aimed at
-function fan(e, t, n, width, off) { // the spreader: n bolts side by side across width radians, aimed at t
+function fan(e, t, n, width, off, dmg) { // the spreader: n bolts side by side across width radians, aimed at t; off shifts them half a gap
   const dx = t.x - e.x, dz = t.z - e.z, L = Math.hypot(dx, dz) || 1, a0 = Math.atan2(dx, dz);
-  for (let k = 0; k < n; k++) { const a = a0 + ((k + off) / (n - 1) - 0.5) * width; shootAt(e, e.x + Math.sin(a) * L, t.ey - 0.35, e.z + Math.cos(a) * L, 7, 10); }
+  for (let k = 0; k < n; k++) { const a = a0 + ((k + off) / (n - 1) - 0.5) * width; shootAt(e, e.x + Math.sin(a) * L, t.ey - 0.35, e.z + Math.cos(a) * L, dmg, 10); }
+}
+function blast(x, y, z) { // the charger's explosion at the end of its run (co-op): on every page, and it hurts whoever stands in it there
+  const R = TYPES.charge.r + 1; fx(x, y, z, 7, COL.sodium, 0.35); fx(x, y, z, 3.5, '#ffffff', 0.2); sfx.boom();
+  if (state === 'play' && Math.hypot(P.x - x, P.ey - 0.6 - y, P.z - z) < R) damage(35, x, z);
 }
 
 /* ---------- input ---------- */
@@ -1872,14 +1876,14 @@ function coopElect(now) {
   } else if (!net.auth && was) for (const e of enemies) { e.tx = e.x; e.ty = e.y; e.tz = e.z; }
 }
 function coopTake(r, s) { // the co-op part of one message from another page
-  if (Array.isArray(s.bl) && !net.auth) for (const v of s.bl.slice(0, 40)) if (Array.isArray(v) && v.length >= 9)
-    launchBolt(clamp(num(v[0]), -150, 150), clamp(num(v[1]), -2, 40), clamp(num(v[2]), -150, 150), clamp(num(v[3]), -20, 20), clamp(num(v[4]), -20, 20), clamp(num(v[5]), -20, 20), clamp(num(v[6]), 0, 30), num(v[7]), num(v[8]));
+  if (Array.isArray(s.bl) && !net.auth) for (const v of s.bl.slice(0, 80)) if (Array.isArray(v) && v.length >= 9)
+    launchBolt(clamp(num(v[0]), -150, 150), clamp(num(v[1]), -2, 40), clamp(num(v[2]), -150, 150), clamp(num(v[3]), -120, 120), clamp(num(v[4]), -120, 120), clamp(num(v[5]), -120, 120), clamp(num(v[6]), 0, 40), num(v[7]), num(v[8]), clamp(num(v[9]) || 1, 1, 3));
   if (Array.isArray(s.kx)) for (const v of s.kx.slice(0, 48)) {
     if (!Array.isArray(v)) continue; if (num(v[1]) === R.you) net.k++;
     const e = enemies.find(o => o.id === num(v[0])); if (e && !net.auth) killEnemy(e);
   }
   if (r.n === net.authN && !net.auth) {
-    if (Array.isArray(s.ev)) for (const v of s.ev.slice(0, 8)) { if (!Array.isArray(v)) continue; const n = num(v[1]) | 0; if (v[0] === 'w') { waveAnnounce(n); net.spent.clear(); } else if (v[0] === 'c') waveClear(n); }
+    if (Array.isArray(s.ev)) for (const v of s.ev.slice(0, 8)) { if (!Array.isArray(v)) continue; const n = num(v[1]) | 0; if (v[0] === 'w') { waveAnnounce(n); net.spent.clear(); } else if (v[0] === 'c') waveClear(n); else if (v[0] === 'x') blast(clamp(num(v[1]), -150, 150), clamp(num(v[2]), -2, 40), clamp(num(v[3]), -150, 150)); }
     if (s.w !== undefined) { applySnap(s); net.snap = true; }
   }
   if (net.auth) {
@@ -2188,9 +2192,9 @@ function tgtPos(n) {
   return tpos;
 }
 /* The three newer bosses. ch is the boss's state, sent to every page: 1 = winding up (its eye swells; the sniper's red line shows), 2 = the charger's run.
-   spread: a fan of bolts, a second fan in between once it is down to half.
-   charge: stops, glows, then runs straight at where its target stood; a hit takes 25. It ends the run on a wall, the ground or after 1.3 s.
-   sniper: keeps its distance, shows a red line on its target for a second, then fires one fast bolt (22); two at half health. */
+   spread: fans of bolts in quick succession (more of them in co-op, and more again at half health).
+   charge: stops, glows, then runs straight at where its target stood; a hit takes 25. It ends the run on a wall, the ground or after 1.3 s; in co-op it then explodes (35, 1 m beyond its body).
+   sniper: keeps its distance, shows a red line on its target for a second, then fires one fast bolt (22; in co-op 25, far faster and bigger); two at half health. */
 let bumpCD = 0, trailT = 0;
 const laserMat = new THREE.MeshBasicMaterial({ color: 0xff3b2e, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
 const laserGeo = new THREE.BoxGeometry(0.035, 0.035, 1);
@@ -2213,18 +2217,20 @@ function bossLook(e, up, dt) { // on every page: the wind-up glow, the red line,
 function bossAct(e, dt, t, d, ty) { // on the page that flies it: the attacks
   const seen = () => !blocked(e.x, e.y, e.z, t.x, t.ey - 0.3, t.z);
   if (e.type === 'spread') {
-    if (e.burst > 0 && (e.bt -= dt) <= 0) { fan(e, t, 9, 1.0, 0.5); e.burst = 0; }
-    if ((e.cd -= dt) <= 0 && e.y < ty + 2) { if (d < e.T.range + 12 && seen()) { fan(e, t, e.half ? 9 : 7, 1.0, 0); if (e.half) { e.burst = 1; e.bt = 0.45; } e.cd = e.half ? 2.4 : 3.2; } else e.cd = 0.4; }
+    // co-op: 7 bolts of 10.5, twice; at half health 12 bolts, three times. Alone: 7 of 7 once; at half 9, twice. Each fan after the first fills the gaps of the one before
+    const n = coop ? (e.half ? 12 : 7) : (e.half ? 9 : 7), dmg = coop ? 10.5 : 7;
+    if (e.burst > 0 && (e.bt -= dt) <= 0) { e.burst--; e.bt = 0.32; fan(e, t, n, 1.0, e.burst % 2 ? 0.5 : 0, dmg); }
+    if ((e.cd -= dt) <= 0 && e.y < ty + 2) { if (d < e.T.range + 12 && seen()) { fan(e, t, n, 1.0, 0, dmg); e.burst = (coop ? (e.half ? 3 : 2) : (e.half ? 2 : 1)) - 1; e.bt = 0.32; e.cd = e.half ? 2.6 : 3.2; } else e.cd = 0.4; }
   } else if (e.type === 'charge') {
     if (e.ch === 0 && (e.cd -= dt) <= 0) { if (d < 32 && seen()) { e.ch = 1; e.chT = e.half ? 0.6 : 0.9; } else e.cd = 0.4; }
     else if (e.ch === 1 && (e.chT -= dt) <= 0) { // go: straight at where the target stands now
       const dx = t.x - e.x, dy = t.ey - 0.5 - e.y, dz = t.z - e.z, L = Math.hypot(dx, dy, dz) || 1, sp = 21;
-      e.dvx = dx / L * sp; e.dvy = dy / L * sp; e.dvz = dz / L * sp; e.ch = 2; e.chT = Math.min(1.3, (L + 4) / sp); tone('sawtooth', 160, 420, 0.3, 0.07);
+      e.dvx = dx / L * sp; e.dvy = dy / L * sp; e.dvz = dz / L * sp; e.ch = 2; e.chT = Math.min(1.3, (coop ? L : L + 4) / sp); // in co-op it stops on the spot and explodes there tone('sawtooth', 160, 420, 0.3, 0.07);
     }
   } else if (e.type === 'sniper') {
     if (e.ch === 0 && (e.cd -= dt) <= 0) { if (d < 48 && seen()) { e.ch = 1; e.chT = 1.1; e.shots = e.half ? 2 : 1; } else e.cd = 0.4; }
     else if (e.ch === 1 && (e.chT -= dt) <= 0) {
-      shootAt(e, t.x, t.ey - 0.25, t.z, 22, 34);
+      if (coop) shootAt(e, t.x, t.ey - 0.25, t.z, 25, 100, 1.5); else shootAt(e, t.x, t.ey - 0.25, t.z, 22, 34); // co-op: too fast to dodge once fired, half as big again; hide while the line shows
       if (--e.shots > 0) e.chT = 0.35; else { e.ch = 0; e.cd = e.half ? 2.8 : 3.8; }
     }
   }
@@ -2269,7 +2275,8 @@ function update(dt, live) {
     else { const a = d > e.T.range + 2 ? 1 : d < e.T.range - 4 ? -0.8 : 0; ax = nx * a - nz * e.orbit * 0.7; az = nz * a + nx * e.orbit * 0.7; ty = e.T.alt + t.y * 0.5 + Math.sin(time * 1.7 + e.ph) * 0.35; } // a little higher when the player has climbed
     if (e.ch === 2 && e.type === 'charge') { // the charge: straight at where the target stood, until it hits something or runs out
       e.x += e.dvx * dt; e.y += e.dvy * dt; e.z += e.dvz * dt; e.chT -= dt;
-      if (pushOut(e, e.r + 0.2, e.y - e.r, e.y + e.r) || e.y < 1.2 || e.chT <= 0 || Math.abs(e.x) > MAP.dx || Math.abs(e.z) > MAP.dz) { e.ch = 0; e.cd = e.half ? 2.4 : 3.8; e.vx = e.vz = 0; e.x = clamp(e.x, -MAP.dx, MAP.dx); e.z = clamp(e.z, -MAP.dz, MAP.dz); e.y = Math.max(e.y, 1.2); }
+      if (pushOut(e, e.r + 0.2, e.y - e.r, e.y + e.r) || e.y < 1.2 || e.chT <= 0 || Math.abs(e.x) > MAP.dx || Math.abs(e.z) > MAP.dz) { e.ch = 0; e.cd = e.half ? 2.4 : 3.8; e.vx = e.vz = 0; e.x = clamp(e.x, -MAP.dx, MAP.dx); e.z = clamp(e.z, -MAP.dz, MAP.dz); e.y = Math.max(e.y, 1.2);
+        if (coop) { const r2 = v => Math.round(v * 100) / 100; blast(e.x, e.y, e.z); net.ev.push(['x', r2(e.x), r2(e.y), r2(e.z)]); if (state === 'over') return; } }
     } else {
       const k = Math.min(1, dt * 3), slow = e.ch === 1 ? 0.15 : 1; e.vx += (ax * e.speed * slow - e.vx) * k; e.vz += (az * e.speed * slow - e.vz) * k;
       e.x += e.vx * dt; e.z += e.vz * dt; e.y += (ty - e.y) * Math.min(1, dt * 1.6);
@@ -2282,10 +2289,10 @@ function update(dt, live) {
       if (up && Math.hypot(P.x - e.x, e.y - P.ey + 0.3, P.z - e.z) < 1.35) { const ex = e.x, ez = e.z; killEnemy(e); damage(15, ex, ez); if (state === 'over') return; }
       continue;
     }
-    if (e.type === 'boss' && (e.st -= dt) <= 0) { e.st = 8; if (enemies.length < 8 + 2 * (np - 1)) { spawnEnemy('ram', e); spawnEnemy('ram', e); } } // lets two rams go every 8 s, unless the air is already full
+    if (e.type === 'boss' && (e.st -= dt) <= 0) { e.st = 8; if (enemies.length < (coop ? 10 : 8) + 2 * (np - 1)) { spawnEnemy('ram', e); spawnEnemy('ram', e); if (coop) { spawnEnemy('scout', e); spawnEnemy('scout', e); } } } // lets two rams go every 8 s (in co-op two scouts as well), unless the air is already full
     if (t.idle) { e.ch = 0; continue; } // nobody to shoot at
     if (e.T.boss && e.type !== 'boss') { bossAct(e, dt, t, d, ty); if (state === 'over') return; continue; }
-    if (e.burst > 0) { e.bt -= dt; if (e.bt <= 0) { shootBolt(e, 8, t); e.burst--; e.bt = e.T.boss ? 0.14 : 0.2; } }
+    if (e.burst > 0) { e.bt -= dt; if (e.bt <= 0) { shootBolt(e, e.T.boss && coop ? 12 : 8, t); e.burst--; e.bt = e.T.boss ? 0.14 : 0.2; } }
     e.cd -= dt;
     if (e.cd <= 0 && e.y < ty + 2) {
       if (d < e.T.range + 10 && !blocked(e.x, e.y, e.z, t.x, t.ey - 0.3, t.z)) { if (e.T.boss) { e.burst = 5; e.bt = 0; e.cd = e.half ? 2.6 : 3.6; } else if (e.type === 'heavy') { e.burst = 3; e.bt = 0; e.cd = 3.2; } else { shootBolt(e, 6, t); e.cd = Math.max(1.6, 3.1 - wave * 0.045) + Math.random() * 1.2; } }
@@ -2301,7 +2308,7 @@ function update(dt, live) {
       p.x += b.vx * h; p.y += b.vy * h; p.z += b.vz * h;
       if (p.y < 0.05) { dead = true; break; }
       for (const bx of hard) if (p.y > bx.y0 && p.y < bx.h && Math.abs(p.x - bx.x) < bx.hx && Math.abs(p.z - bx.z) < bx.hz) { dead = true; break; }
-      if (!dead && up && p.y > P.y && p.y < P.y + 1.95 && Math.hypot(p.x - P.x, p.z - P.z) < 0.5) { dead = true; damage(b.dmg, b.sx, b.sz); if (state === 'over') return; }
+      if (!dead && up && p.y > P.y - 0.16 * (b.size - 1) && p.y < P.y + 1.95 + 0.16 * (b.size - 1) && Math.hypot(p.x - P.x, p.z - P.z) < 0.5 + 0.16 * (b.size - 1)) { dead = true; damage(b.dmg, b.sx, b.sz); if (state === 'over') return; }
     }
     if (dead) { b.on = false; b.m.visible = false; fx(p.x, p.y, p.z, 1.2, COL.alarm, 0.12); }
   }
