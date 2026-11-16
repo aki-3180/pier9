@@ -1,0 +1,12 @@
+{
+  "name": "pier9-rooms",
+  "private": true,
+  "description": "第九埠頭のルームサーバー（Cloudflare Workers + Durable Objects）",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.162.0"
+  }
+}

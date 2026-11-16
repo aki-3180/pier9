@@ -1,0 +1,14 @@
+# 第九埠頭のルームサーバー（Cloudflare Workers + Durable Objects）。
+# デプロイのしかたは README.md の「ルームサーバーの用意」を参照。
+name = "pier9-rooms"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+# ルーム1つにつき Durable Object を1つ使う。無料プランでは SQLite 版しか使えないので new_sqlite_classes で作る。
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
