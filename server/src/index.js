@@ -2,6 +2,7 @@
 // ルーム番号（4桁）ごとに Durable Object を1つ持ち、そこへ全員が WebSocket でつなぐ。
 // ルームの中身（モード・マップ・枠・ホスト・試合中かどうか）はここが決め、全員に配る。
 // 試合中の位置や射撃は "S" で始まる文字列で届き、中身は見ずに送り主の番号を付けて他の全員へ流す。
+// /home はホーム画面（タイトル画面）のチャット。Durable Object を1つだけ使い、ホーム画面を開いている全員がつなぐ。
 import { DurableObject } from 'cloudflare:workers';
 
 const MAX = 8;                     // ひとつのルームに入れる人数
@@ -26,6 +27,10 @@ function place(r, list) { const ord = order(r.mode); list.forEach((m, i) => { m.
 export default {
   async fetch(req, env) {
     const url = new URL(req.url), m = url.pathname.match(/^\/room\/(\d{4})$/);
+    if (url.pathname === '/home') {
+      if (req.headers.get('Upgrade') !== 'websocket') return new Response('websocket only', { status: 426 });
+      return env.HOME.get(env.HOME.idFromName('home')).fetch(req);
+    }
     if (!m) return new Response(url.pathname === '/' ? 'pier9 rooms: ok' : 'not found', { status: url.pathname === '/' ? 200 : 404 });
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('websocket only', { status: 426 });
     return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(req);
@@ -162,5 +167,54 @@ export class Room extends DurableObject {
       const i = this.who(ws), m = r.members[i.id]; if (!m || m.k !== i.k) continue;
       out.you = i.n; try { ws.send(JSON.stringify(out)); } catch (_) {}
     }
+  }
+}
+
+// ホーム画面のチャット。つないでいる人数と、最近の発言（30件・24時間まで）を配る。
+const LOG = 30, KEEP = 86400000, SAY = 60, GAP = 1000;
+export class Home extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
+  }
+  live(but) { return this.ctx.getWebSockets().filter(o => o !== but); }
+  async log() { const now = Date.now(); return ((await this.ctx.storage.get('log')) || []).filter(e => now - e.at < KEEP); }
+  cast(out, but) { const t = JSON.stringify(out); for (const o of this.live(but)) { try { o.send(t); } catch (_) {} } }
+  count(gone) { const n = this.live(gone).length; this.cast({ t: 'n', n }, gone); } // gone：閉じた回線（数えず、送らない）
+
+  async fetch() {
+    const pair = new WebSocketPair(), client = pair[0], ws = pair[1];
+    this.ctx.acceptWebSocket(ws); ws.serializeAttachment({ t: Date.now(), at: 0 });
+    ws.send(JSON.stringify({ t: 'hi', log: await this.log(), n: this.live().length }));
+    this.cast({ t: 'n', n: this.live().length }, ws); // ほかの人へ、増えた人数を
+    if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + TICK);
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  async webSocketMessage(ws, msg) {
+    if (typeof msg !== 'string' || msg.length > 1024) return;
+    let d; try { d = JSON.parse(msg); } catch (_) { return; }
+    if (!d || d.t !== 'say') return;
+    const a = ws.deserializeAttachment() || {}, now = Date.now();
+    if (now - (a.at || 0) < GAP) return; // 1秒に1通まで
+    const name = clean(d.name, 10), s = clean(d.s, SAY); if (!name || !s) return;
+    a.at = now; ws.serializeAttachment(a);
+    const e = { name, s, at: now }, log = (await this.log()).concat(e).slice(-LOG);
+    await this.ctx.storage.put('log', log);
+    this.cast({ t: 'say', e }, ws);
+    try { ws.send(JSON.stringify({ t: 'say', e, me: 1 })); } catch (_) {}
+  }
+
+  async webSocketClose(ws) { try { ws.close(1000); } catch (_) {} this.count(ws); }
+  async webSocketError(ws) { this.count(ws); }
+
+  async alarm() { // 応答のない回線を閉じる（人数に数えないように）。誰もいなければ見回りをやめる
+    const now = Date.now(); let gone = false;
+    for (const ws of this.ctx.getWebSockets()) {
+      const ts = this.ctx.getWebSocketAutoResponseTimestamp(ws), a = ws.deserializeAttachment() || {};
+      if (now - Math.max(ts ? ts.getTime() : 0, a.t || 0) > STALE) { try { ws.close(4003, 'stale'); } catch (_) {} gone = true; }
+    }
+    if (gone) this.count();
+    if (this.ctx.getWebSockets().length) await this.ctx.storage.setAlarm(now + TICK);
   }
 }
