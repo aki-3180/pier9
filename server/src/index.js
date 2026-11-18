@@ -9,7 +9,7 @@ import { DurableObject } from 'cloudflare:workers';
 const MAX = 8;                     // ひとつのルームに入れる人数
 const SLOTS = [8, 8, 6, 8, 8];     // モードごとの枠の数：1v1v…, 2v2v…, 3v3, 4v4, 協力
 const SIZE = [1, 2, 3, 4, 8];      // 1チームの人数
-const MAPS = 5;
+const MAPS = 6;
 const GRACE = 20000;               // 回線が切れた人の枠を取っておく時間
 const STALE = 75000;               // これだけ ping が来なければ回線は死んでいる（裏に回したタブのタイマーは1分に1回まで落ちるので、それより長く）
 const TICK = 15000;                // 人がいるあいだの見回りの間隔
