@@ -10,7 +10,10 @@ const MAX = 8;                     // ひとつのルームに入れる人数
 const SLOTS = [8, 8, 6, 8, 8];     // モードごとの枠の数：1v1v…, 2v2v…, 3v3, 4v4, 協力
 const SIZE = [1, 2, 3, 4, 8];      // 1チームの人数
 const MAPS = 6;
-const GRACE = 20000;               // 回線が切れた人の枠を取っておく時間
+const GRACE = 60000;               // 回線が切れた人（タブを閉じた・再読み込みした・回線が切れた）の枠と試合の居場所を取っておく時間
+const HOST_WAIT = 10000;
+const LIMIT = 3600000;             // 人対人の試合（協力以外）は、始まってからこれだけで終わる
+const COOP = 4;                    // 協力モードの番号           // ホストの回線がこれだけ切れていたら、つながっている人へホストを渡す
 const STALE = 75000;               // これだけ ping が来なければ回線は死んでいる（裏に回したタブのタイマーは1分に1回まで落ちるので、それより長く）
 const TICK = 15000;                // 人がいるあいだの見回りの間隔
 const BEAT = 600000;               // ルームがホームの一覧へ「まだある」と知らせる間隔（変化がなくても）。1回＝1リクエストなので長めに
@@ -110,7 +113,7 @@ export class Room extends DurableObject {
       }
       case 'start': { // ホストだけ。枠に入っている人がそのまま試合に出る
         if (!host || !lobby || !ms.some(o => o.slot >= 0 && !o.off)) return;
-        r.phase = 'play'; r.g++; r.last = null; for (const o of ms) o.ig = o.slot >= 0 && !o.off ? 1 : 0; break;
+        r.phase = 'play'; r.g++; r.last = null; r.t0 = Date.now(); for (const o of ms) o.ig = o.slot >= 0 && !o.off ? 1 : 0; break;
       }
       case 'end': case 'wipe': { // end：ホストが試合を終える。wipe：協力で全滅した／対戦で勝利条件に届いた（試合に出ている人なら誰でも）
         if (lobby || (d.t === 'end' ? !host : !m.ig)) return;
@@ -141,6 +144,7 @@ export class Room extends DurableObject {
       if (now - last > STALE) { this.info.delete(ws); try { ws.close(4003, 'stale'); } catch (_) {} continue; }
       live.add(i.id);
     }
+    if (r.phase === 'play' && r.mode !== COOP && r.t0 && now - r.t0 >= LIMIT) { r.phase = 'lobby'; r.last = { v: 'time' }; changed = true; } // 時間切れ
     for (const [id, m] of Object.entries(r.members)) {
       if (!m.off && !live.has(id)) { m.off = now; changed = true; }
       if (m.off && now - m.off > GRACE) { delete r.members[id]; changed = true; }
@@ -154,15 +158,19 @@ export class Room extends DurableObject {
       const ms = this.members();
       if (!ms.length) this.room = null;
       else {
-        if (!ms.some(m => m.n === r.host)) { const on = ms.filter(m => !m.off); r.host = (on.length ? on : ms).reduce((a, b) => (a.n < b.n ? a : b)).n; }
-        if (r.phase === 'play' && !ms.some(m => m.ig)) r.phase = 'lobby';
+        const h = ms.find(m => m.n === r.host), on = ms.filter(m => !m.off), was = r.host;
+        if (!h || (h.off && Date.now() - h.off > HOST_WAIT && on.length)) r.host = (on.length ? on : ms).reduce((a, b) => (a.n < b.n ? a : b)).n; // いなくなった、または戻ってこないホストの代わり
+        if (r.host !== was) changed = true;
+        if (r.phase === 'play' && !ms.some(m => m.ig)) { r.phase = 'lobby'; changed = true; }
         if (r.phase === 'lobby') for (const m of ms) m.ig = 0;
       }
     }
     if (!this.room) { await this.ctx.storage.deleteAll(); await this.report(); return; } // 誰もいない：番号を空ける
     if (changed) { await this.ctx.storage.put('room', this.room); this.send(); }
     await this.report();
-    if (rearm || !(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + TICK);
+    const end = this.room.phase === 'play' && this.room.mode !== COOP && this.room.t0 ? this.room.t0 + LIMIT : Infinity; // 時間切れは遅れずに
+    const at = await this.ctx.storage.getAlarm();
+    if (rearm || !at || at > end) await this.ctx.storage.setAlarm(Math.min(Date.now() + TICK, Math.max(Date.now(), end)));
   }
 
   async report() { // ホームのルーム一覧へ、このルームの概要を知らせる（変わったときと、1分ごと）
@@ -177,7 +185,8 @@ export class Room extends DurableObject {
 
   send() {
     const r = this.room, ps = this.members().map(m => [m.n, m.name, m.slot, m.off ? 0 : 1, m.ig]);
-    const out = { t: 'room', code: r.code, mode: r.mode, map: r.map, phase: r.phase, g: r.g, host: r.host, last: r.last, lim: r.lim || 0, ps, you: 0 };
+    const left = r.phase === 'play' && r.mode !== COOP && r.t0 ? Math.max(0, r.t0 + LIMIT - Date.now()) : 0; // 試合の残り時間（ミリ秒。時計のずれが出ないよう、残りで送る）
+    const out = { t: 'room', code: r.code, mode: r.mode, map: r.map, phase: r.phase, g: r.g, host: r.host, last: r.last, lim: r.lim || 0, left, ps, you: 0 };
     for (const ws of this.ctx.getWebSockets()) {
       const i = this.who(ws), m = r.members[i.id]; if (!m || m.k !== i.k) continue;
       out.you = i.n; try { ws.send(JSON.stringify(out)); } catch (_) {}
