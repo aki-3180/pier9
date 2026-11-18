@@ -262,6 +262,34 @@ npx wrangler deploy
 
 ## 構成
 
-- `index.html` … ゲーム本体（HTML・CSS・JavaScript を1ファイルに収録）
+- `index.html` … 画面の部品（HTML）と、読み込む CSS・JavaScript の一覧
+- `css/` … 見た目。`base.css`（色・フォント・画面全体の層）、`hud.css`（遊んでいる最中の表示、タッチボタン、順位表など共通の部品）、`menu.css`（開始画面）、`lobby.css`（ルーム画面）
+- `js/` … ゲーム本体（下の表）
+- `assets/` … 画像・3D モデル・音のファイルを置く場所。いまは空です（`assets/README.md`）
 - `config.js` … ルームサーバーの URL
 - `server/` … ルームサーバー（Cloudflare Workers + Durable Objects）。`src/index.js` が本体、`wrangler.toml` が設定。Vercel には載せません（`.vercelignore`）
+
+### js/ の中身
+
+| 場所 | 中身 |
+| --- | --- |
+| `js/core/` | 土台。`dom.js`（要素の取得、エラーの表示、CSS の色）、`renderer.js`（WebGL の準備。three.js か WebGL が無ければここで止める）、`settings.js`（設定と記録の保存）、`audio.js`（効果音。Web Audio で合成していて、音のファイルは使っていない） |
+| `js/world/scene.js` | 3D 空間：カメラ、光、空 |
+| `js/world/maps/` | マップ。`common.js`（昼夜の設定、全マップ共通の材質と組み立て部品）、1マップ1ファイル（`yard.js` コンテナ場、`depot.js` 倉庫街、`market.js` 魚市場、`alley.js` 横丁、`hall.js` 上屋、`jetty.js` 突堤）、`index.js`（マップの一覧と切り替え） |
+| `js/game/` | ゲームの中身。`weapons.js`（武器の性能表）、`viewmodel.js`（手に持つ銃の見た目と照準器）、`effects.js`（曳光弾・閃光・敵弾）、`drones.js`（ドローンとボス）、`collision.js`（当たり判定）、`player.js`（自分と持っている武器）、`waves.js`（波）、`combat.js`（射撃・被弾・装填）、`ai.js`（ドローンの狙いとボスの動き）、`update.js`（1コマ分の更新）、`loop.js`（毎フレームの描画） |
+| `js/ui/` | 画面と操作。`input.js`（タッチ・マウス・キーボード）、`layout.js`（ボタン配置の編集）、`screens.js`（画面の切り替え）、`hud.js`（告知とダメージ数字）、`view.js`（画面サイズ・レーダー・味方の印）、`chat.js`（キルログとチャット）、`board.js`（順位表）、`lobby.js`（ルーム画面とルームの作成・参加）、`home.js`（開始画面のルーム一覧とホームの会話） |
+| `js/net/` | オンライン。`room.js`（モード・色・ルームの状態）、`match.js`（試合中の自分の状態、武器選び、名前）、`players.js`（ほかの人の姿と自分の送信）、`sync.js`（受け取った状態の反映、放置、協力のドローン担当、勝敗）、`connection.js`（サーバーとの接続、再読み込み後の復帰） |
+| `js/main.js` | 起動。最後に読み込まれ、再読み込み前のルームへの復帰と描画のループを始める |
+
+### js/ の決まり
+
+- ビルドはありません。`index.html` に並べた `<script>` を上から順に読み込みます。モジュール（`import` / `export`）ではない普通のスクリプトなので、どのファイルでも一番外側で宣言した名前は、ほかのすべてのファイルから使えます。そのぶん、同じ名前を2つのファイルで宣言するとエラーになります。
+- 関数の外に書いたコード（読み込んだときにすぐ実行される部分）は、自分より上のファイルにあるものしか使えません。関数の中からなら、下のファイルにあるものも使えます（関数が呼ばれるのは全部を読み込んだ後なので）。
+- ファイルを足すときは、`index.html` の一覧の、使うものより下に加えます。
+- 全部を読み込み終えるまで開始画面のボタンは反応しません（`main.js` が `body` に `ready` を付けるまで。読み込みの途中で押されて、まだ無い関数に届くのを防ぐため）。
+
+### 見た目を作り込むとき
+
+- three.js は r128 を CDN から読み込んでいます（`index.html`）。r128 の追加機能（3D モデルを読む `GLTFLoader`、画面全体に効果をかける `EffectComposer` など）は、`https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/…` にある普通のスクリプト版を three.js の直後に `<script>` で足せば、いまの作りのまま使えます。
+- three.js を新しくする場合、この形のまま上げられるのは r147 までです。r148 からは追加機能が、r161 からは本体も `import` で読む形（ES モジュール）しか無いので、`js/` をモジュールに書き直す必要があります（別のファイルから書き換えている変数が 46 あり、モジュールではそのままでは書き換えられないので、ひとまとめにする作業が要ります）。光の強さや色の扱いも途中の版で変わっているので、見た目の調整もやり直しになります。
+- 画像・モデル・音のファイルを使い始めると、`index.html` を直接開く方法（`file://`）ではブラウザがそれらを読ませません。手元では `python3 -m http.server` などで開いて `http://localhost:8000` で遊んでください。Vercel ではそのまま動きます。
