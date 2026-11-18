@@ -1363,6 +1363,9 @@ function buildHall(m) {
 
     // low cover: a barrier on the east lane near the middle, pallets and drums at the base, a timber pile on the west lane
     jersey(7.6, 10.6, -0.6);
+    // block walls in front of the base, taller than anyone and too tall to climb from the drums (3 m): from the rack to the west trench, from the east trench to the drums
+    const blockWall = (x0, x1, z) => { B('conc', x0, x1, 0, 3, z - 0.15, z + 0.15, 0xb8b4aa); B('flat', x0, x1, 3, 3.08, z - 0.18, z + 0.18, STEEL, 0); for (let x = x0 + 0.8; x < x1 - 0.4; x += 1.6) B('flat', x, x + 0.8, 0.9, 1.05, z - 0.16, z + 0.16, YEL, 0); };
+    blockWall(-13.4, -4.8, -22.1); blockWall(5.0, 12.3, -22.6);
     pallets(-2.2, -0.8, -22.6, -21.4, 5, 0.5); pallets(-0.6, 0.8, -22.6, -21.4, 3); drums(12.6, -22.4, 0x2c5c9c, 0xa5352f); drums(-11.8, -2.6, 0xa5352f, 0x2c5c9c);
     for (let i = 0; i < 5; i++) B('wood', -12.2 + i * 0.03, -9.8 - i * 0.03, i * 0.2, i * 0.2 + 0.2, -5.6, -4.4, i % 2 ? 0xd8b98a : 0xc8a878, 0); col(-12.2, -9.8, 0, 1.0, -5.6, -4.4);
     for (const [x, z] of [[7.4, -13.4], [7.9, -12.9], [7.4, -12.4]]) C('flat', x, 0.12, z, 0.38, 0.24, 0, 0x15181d); C('flat', 7.4, 0.36, -12.9, 0.38, 0.24, 0, 0x15181d); // old tyres, drawn only
