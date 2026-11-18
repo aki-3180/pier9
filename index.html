@@ -1985,7 +1985,7 @@ function show(mode) {
   if (mode === 'pause') {
     $('eyebrow').textContent = online ? `ルーム ${R.code} ／ ${MODES[R.mode].name} ／ ` + (coop ? `第${wave}波 ／ 得点 ${score}` : `撃破 ${net.k} ／ 被撃破 ${net.d}` + (R.lim > 0 ? ` ／ ${R.lim}キル先取` : '')) : `第${wave}波 ／ 得点 ${score}`;
     $('heading').textContent = online ? '離席中' : '一時停止';
-    $('lead').hidden = !online; if (online) { $('lead').textContent = pvp ? '離席中は相手から見えず、撃たれません。' : '離席中もドローンは動き続けます。離席中は狙われず、撃たれません。'; vsBoard($('vsTable'), 99); }
+    $('lead').hidden = !online; if (online) { $('lead').textContent = pvp ? '離席中もその場に残ります。相手からは見えていて、撃たれると倒されます。' : '離席中もその場に残り、ドローンは動き続けます。離席中は狙われず、撃たれません。'; vsBoard($('vsTable'), 99); }
     $('stats').hidden = true; $('go').textContent = '再開する';
   }
   if (mode === 'over') { $('eyebrow').textContent = score >= best && score > 0 ? '自己最高を更新' : (MAP.day ? '日勤警備 ／ ' : '夜勤警備 ／ ') + MAP.tag; $('heading').textContent = '勤務終了'; $('lead').hidden = true; $('stats').hidden = false;
@@ -2093,21 +2093,28 @@ $('chatSend').addEventListener('pointerdown', e => e.preventDefault()); // keep 
 $('chatBtn').addEventListener('click', () => { if (chatBar.hidden) chatOpen(); else chatClose(); });
 const RG = { vest: new THREE.BoxGeometry(0.56, 0.7, 0.32), legs: new THREE.BoxGeometry(0.44, 0.78, 0.26), head: new THREE.SphereGeometry(0.2, 10, 8), gun: new THREE.BoxGeometry(0.08, 0.1, 0.6) };
 function mkRemote(n) {
-  const g = new THREE.Group(), mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-  mk(RG.vest, mat, 0, 1.12, 0, g); mk(RG.legs, darkMat, 0, 0.39, 0, g); mk(RG.head, mat, 0, 1.66, 0, g); mk(RG.gun, darkMat, 0.22, 1.2, -0.4, g);
+  const g = new THREE.Group(), mat = new THREE.MeshLambertMaterial({ color: 0xffffff }), dmat = darkMat.clone(); // own materials, so a player who has dropped out can be drawn see-through
+  mk(RG.vest, mat, 0, 1.12, 0, g); mk(RG.legs, dmat, 0, 0.39, 0, g); mk(RG.head, mat, 0, 1.66, 0, g); mk(RG.gun, dmat, 0.22, 1.2, -0.4, g);
   const lamp = glow(0xffffff, 0.9); lamp.position.set(0, 1.95, 0); g.add(lamp);
   g.visible = false; scene.add(g);
-  return { n, g, mat, lamp, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0, pitch: 0, py: 0, tpy: 0, y: 1.25, r: 0.6, alive: false, name: '', col: COL.steel, slot: -2, team: -1, mate: false,
+  return { n, g, mat, dmat, lamp, ghost: false, away: false, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0, pitch: 0, py: 0, tpy: 0, y: 1.25, r: 0.6, alive: false, name: '', col: COL.steel, slot: -2, team: -1, mate: false,
     f: 0, d: 0, k: 0, hp: 100, lastShot: -9, fresh: true, last: null, tgt: { me: false, x: 0, y: 0, ey: 0, z: 0 } };
 }
-function dropRemote(n) { const r = remotes.get(n); if (!r) return; scene.remove(r.g); r.mat.dispose(); r.lamp.material.dispose(); remotes.delete(n); }
-function netSend(paused) {
+function dropRemote(n) { const r = remotes.get(n); if (!r) return; scene.remove(r.g); r.mat.dispose(); r.dmat.dispose(); r.lamp.material.dispose(); remotes.delete(n); }
+// A player whose page has gone quiet (tab closed, reloading, line down, phone asleep) stays where they stood, drawn see-through, until they come back
+// or the room lets their place go (a minute). Nobody is there to take a hit, so shots pass through them.
+function ghostly(r, on) {
+  if (r.ghost === on) return; r.ghost = on;
+  for (const m of [r.mat, r.dmat, r.lamp.material]) { m.transparent = on || m === r.lamp.material; m.opacity = on ? 0.28 : m === r.lamp.material ? 0.9 : 1; m.depthWrite = !on; m.needsUpdate = true; }
+}
+function netSend(away) { // away: paused, or the tab is hidden. The player stays where they stand (and in versus can still be shot)
   const s = { g: R.g, x: +P.x.toFixed(2), z: +P.z.toFixed(2), y: +P.y.toFixed(2), yaw: +P.yaw.toFixed(3), pt: +P.pitch.toFixed(3),
-    a: paused || net.dead > 0 || net.pick ? 0 : 1, d: net.d, lk: net.lk, k: net.k, f: net.f, hp: Math.max(0, Math.ceil(P.hp)) };
+    a: net.dead > 0 || net.pick ? 0 : 1, d: net.d, lk: net.lk, k: net.k, f: net.f, hp: Math.max(0, Math.ceil(P.hp)) };
+  if (away) s.af = 1;
   if (pvp) s.dm = net.dm;
   if (net.m.length) { s.m = net.m; net.m = []; }
   if (coop) {
-    if (!net.ready) s.nr = 1;
+    if (!net.ready || asleep()) s.nr = 1; // a hidden tab gets about one tick a second: too few to fly the drones
     if (net.dead > 0) s.dd = 1;
     if (net.auth) { // everything another page needs to show the drones, and to fly them on if this page drops out
       const r2 = v => Math.round(v * 100) / 100;
@@ -2146,12 +2153,13 @@ function vsRemoteShot(r) {
   fx(mx, my, mz, 0.8, '#ffc46b', 0.06);
   if (Math.hypot(r.x - P.x, r.z - P.z) < 45) noise(0.07, 3000, 500, 0.07);
 }
-function netSync(dt, immune) { // immune: paused here, so catch up on the match without taking damage
+const QUIET = 2500; // a page silent this long (ms) is drawn as gone (a hidden tab still sends about once a second)
+function netSync(dt, away) { // away: paused here, or the tab is hidden. The match goes on; in versus we can still be shot where we stand
   const now = performance.now(), myTeam = teamOf(mySlot()); let hitter = null; liveRemotes.length = 0;
   if (coop) coopElect(now);
   for (const [n, b] of inbox) {
     const p = member(n);
-    if (!p || p[2] < 0 || !p[4] || now - b.at > 4000) { inbox.delete(n); dropRemote(n); continue; } // out of the match, or silent for 4 s
+    if (!p || p[2] < 0 || !p[4]) { inbox.delete(n); dropRemote(n); continue; } // out of the match (the room keeps a dropped player's place for a minute)
     let r = remotes.get(n);
     if (!r && b.q.length) { const s0 = b.q[0]; r = mkRemote(n); remotes.set(n, r); r.f = num(s0.f); r.d = num(s0.d); }
     if (!r) continue;
@@ -2171,7 +2179,7 @@ function netSync(dt, immune) { // immune: paused here, so catch up on the match 
       r.d = d;
       if (pvp && !r.mate) { // damage this player says it has dealt us
         const dealt = s.dm && typeof s.dm === 'object' ? num(s.dm[R.you]) : 0, was = net.seen[n];
-        if (was !== undefined && dealt > was && !immune && net.dead <= 0 && !net.pick) { P.hp -= Math.min(dealt - was, 110); hitter = r; }
+        if (was !== undefined && dealt > was && net.dead <= 0 && !net.pick) { P.hp -= Math.min(dealt - was, 110); hitter = r; }
         net.seen[n] = dealt;
       }
       if (coop) coopTake(r, s);
@@ -2179,26 +2187,27 @@ function netSync(dt, immune) { // immune: paused here, so catch up on the match 
     }
     b.q.length = 0;
     const s = r.last; if (!s) continue;
-    r.tx = clamp(num(s.x), -LX, LX); r.tz = clamp(num(s.z), -LZ, LZ); r.tyaw = num(s.yaw); r.tpy = clamp(num(s.y), 0, 12); r.pitch = clamp(num(s.pt), -1.2, 1.2); r.k = num(s.k) | 0; r.hp = num(s.hp); r.alive = s.a === 1;
+    r.tx = clamp(num(s.x), -LX, LX); r.tz = clamp(num(s.z), -LZ, LZ); r.tyaw = num(s.yaw); r.tpy = clamp(num(s.y), 0, 12); r.pitch = clamp(num(s.pt), -1.2, 1.2); r.k = num(s.k) | 0; r.hp = num(s.hp); r.alive = s.a === 1; r.away = s.af === 1;
+    ghostly(r, !p[3] || now - b.at > QUIET);
     const k = r.fresh ? 1 : Math.min(1, dt * 12); r.fresh = false;
     r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.py += (r.tpy - r.py) * k; r.y = r.py + 1.25; const da = r.tyaw - r.yaw; r.yaw += Math.atan2(Math.sin(da), Math.cos(da)) * k;
     r.g.visible = r.alive; r.g.position.set(r.x, r.py, r.z); r.g.rotation.y = r.yaw;
-    if (r.alive) liveRemotes.push(r);
+    if (r.alive && !r.ghost) liveRemotes.push(r); // (the ones that can be shot, aimed at by drones and spawned away from)
   }
   for (const n of [...remotes.keys()]) if (!inbox.has(n)) dropRemote(n);
   if (hitter) {
     hurtFrom(hitter.x, hitter.z);
     if (P.hp <= 0) { P.hp = 0; net.dead = 3; net.d++; net.lk = hitter.n; setAim(false); pickI = wi; killLog(hitter.name, hitter.col, myName, myCol()); pickShow(`${hitter.name}に撃たれた`, '3秒で復帰。武器を替えるなら今選ぶ' + (touchMode ? '' : '（1〜5 キー）')); sfx.boom(); net.sendT = 0; }
-  } else if (pvp && net.dead > 0 && !immune) { net.dead -= dt; if (net.dead <= 0) { vsRespawn(); net.sendT = 0; } }
+  } else if (pvp && net.dead > 0 && !away) { net.dead -= dt; if (net.dead <= 0) { vsRespawn(); net.sendT = 0; } } // down while away: back once we return
   if (coop) coopWipe(); else versusWin();
-  if ((net.sendT -= dt) <= 0) { net.sendT = immune && !net.auth ? 0.5 : 0.1; netSend(immune); } // a page away from the game sends less, unless it flies the drones
+  if ((net.sendT -= dt) <= 0) { net.sendT = away && !net.auth ? 0.5 : 0.1; netSend(away); } // a page away from the game sends less, unless it flies the drones
 }
 /* Co-op: the drones are flown by one page, the lowest-numbered one that is caught up and was heard from in the last 1.5 s
    (a page in a hidden tab stops sending, so the next one takes over). Every page flies the bolts and checks only the ones reaching its own player;
    hits, rams and health packs taken are reported to the flying page, which owns the drones' health, the waves and the score. */
 function coopElect(now) {
   if (!net.ready && (net.snap || time - net.t0 > 1.5)) net.ready = true; // caught up: heard from the flying page, or nobody has been flying for 1.5 s
-  let a = net.ready ? R.you : 0;
+  let a = net.ready && !asleep() ? R.you : 0;
   for (const [n, b] of inbox) { const r = remotes.get(n); if (r && r.last && !r.last.nr && now - b.at < 1500 && (!a || n < a)) a = n; }
   const was = net.auth; net.authN = a; net.auth = a === R.you;
   if (net.auth && !was) { // carry on from the last word of the page that flew them
@@ -2254,7 +2263,7 @@ function versusWin() { // the kill count is reached (by one player, or by a team
 }
 function coopWipe() { // everyone in the match is down: the flying page calls it
   if (!net.auth || wave < 1 || net.wiped === R.g || !(net.dead > 0)) return;
-  for (const r of remotes.values()) if (!r.last || !r.last.dd) return;
+  for (const r of remotes.values()) if (!r.ghost && (!r.last || !r.last.dd)) return; // (a player who has dropped out does not hold the match up)
   net.wiped = R.g; roomOp({ t: 'wipe', res: { co: 1, w: wave, sc: score } });
 }
 // Standings: most kills first, then fewest deaths. Equal kills share a rank. In a team mode the teams come first, each with its players under it.
@@ -2289,11 +2298,43 @@ function drawBoard(el, all, rows, co) {
 function vsBoard(el, limit) { const all = standings(); return drawBoard(el, all, boardRows(all, limit, teamPlay()), coop); }
 
 /* the line to the room server */
-let clientId = ''; try { clientId = sessionStorage.getItem('pier9.cid') || ''; } catch (_) {} // one per tab: a reload gets its place back
-if (!/^[A-Za-z0-9]{8,40}$/.test(clientId)) { clientId = Array.from({ length: 20 }, () => 'abcdefghijkmnpqrstuvwxyz23456789'[Math.random() * 32 | 0]).join(''); try { sessionStorage.setItem('pier9.cid', clientId); } catch (_) {} }
+/* Who we are to the room server. The id is kept in localStorage, so a reload, a tab closed and opened again, or a browser that forgets
+   sessionStorage all come back as the same player, into the same place. A second tab of this browser open at the same time is another player:
+   the id belongs to whichever tab holds the lock on it, and any other tab makes one of its own (kept in sessionStorage). */
+const ID_OK = v => typeof v === 'string' && /^[A-Za-z0-9]{8,40}$/.test(v);
+const newPid = () => Array.from({ length: 20 }, () => 'abcdefghijkmnpqrstuvwxyz23456789'[Math.random() * 32 | 0]).join('');
+function tabId() { let v = ''; try { v = sessionStorage.getItem('pier9.cid') || ''; } catch (_) {} if (!ID_OK(v)) { v = newPid(); try { sessionStorage.setItem('pier9.cid', v); } catch (_) {} } return v; }
+let clientId = '';
+const idReady = new Promise(done => {
+  const give = v => { if (!clientId) { clientId = v; done(v); } };
+  let shared = store.get('pid', ''); if (!ID_OK(shared)) { shared = newPid(); store.set('pid', shared); }
+  if (store.get('pid', '') !== shared) { give(tabId()); return; } // nowhere to keep it: one per tab
+  if (!navigator.locks) { give(shared); return; }
+  const hold = () => { if (clientId) return; give(shared); return new Promise(() => {}); }; // kept until the tab closes or reloads
+  navigator.locks.request('pier9.pid', { ifAvailable: true }, lock => {
+    if (lock) return hold();
+    const stop = new AbortController(); // held: a tab that is closing or reloading lets go in a moment; one that stays open keeps it
+    setTimeout(() => { if (clientId) return; stop.abort(); give(tabId()); }, 1500);
+    navigator.locks.request('pier9.pid', { signal: stop.signal }, hold).catch(() => {});
+  }).catch(() => give(shared));
+});
+/* The seat: where we were (room, match, standing, health, tallies), saved every second while in a room. Opening the page again within a minute
+   (the time the room keeps a dropped player's place) goes straight back to it. */
+const SEAT_KEEP = 60000;
+const seatKey = () => 'seat.' + clientId;
+function seatSave() {
+  if (!R.code || !clientId) return;
+  const s = { code: R.code, at: Date.now() };
+  if (online) Object.assign(s, { g: R.g, k: net.k, d: net.d, f: net.f, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), yaw: +P.yaw.toFixed(3),
+    hp: Math.ceil(P.hp), w: wi, dn: net.dead > 0 || net.pick ? 1 : 0 });
+  store.set(seatKey(), s);
+}
+const seatDrop = () => { try { localStorage.removeItem('pier9.' + seatKey()); } catch (_) {} };
+setInterval(seatSave, 1000); addEventListener('pagehide', seatSave);
+try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('pier9.seat.') && !(Date.now() - (store.get(k.slice(6), null) || {}).at < 3600000)) localStorage.removeItem(k); } } catch (_) {} // old seats
 let sock = null, seenG = -1, lastStand = null; // seenG: the match number when last told, so a new one can pull us in
 function connect(code, op) {
-  return new Promise((resolve, reject) => {
+  return idReady.then(() => new Promise((resolve, reject) => {
     let ws, done = false;
     try { ws = new WebSocket(`${SERVER}/room/${code}?op=${op}&id=${clientId}&name=${encodeURIComponent(myName)}&map=${cfg.map}`); } catch (_) { reject('net'); return; }
     const t = setTimeout(() => { if (!done) { done = true; try { ws.close(); } catch (_) {} reject('net'); } }, 9000);
@@ -2305,8 +2346,13 @@ function connect(code, op) {
       if (m.t === 'err') { if (!done) { done = true; clearTimeout(t); reject(String(m.e)); } return; }
       if (m.t === 'room') { if (!done) { done = true; clearTimeout(t); sock = { ws, code }; resolve(); } if (sock && sock.ws === ws) onRoom(m); }
     };
-    ws.onclose = () => { clearTimeout(t); if (!done) { done = true; reject('net'); } else if (sock && sock.ws === ws) lost(); };
-  });
+    ws.onclose = ev => {
+      clearTimeout(t); if (!done) { done = true; reject('net'); return; }
+      if (!sock || sock.ws !== ws) return;
+      if (ev.code === 4002) { sock = null; leaveRoom('同じ人がほかのタブでこのルームに入ったので、こちらは抜けました。', true); } // our id came in on another line: that one is us now
+      else lost();
+    };
+  }));
 }
 function sockSend(text, bulk) { // bulk: game state, dropped rather than queued when the line is backed up
   const ws = sock && sock.ws; if (!ws || ws.readyState !== 1 || (bulk && ws.bufferedAmount > 32768)) return false;
@@ -2328,15 +2374,15 @@ function lost() { // the line dropped: the server keeps our place for 20 s, so t
     if (sock || R.code !== code) return;
     connect(code, 'join').then(() => { if (online) announce('つなぎ直しました'); }, e => {
       if (R.code !== code) return;
-      if (e === 'net' && ++tries < 6) setTimeout(again, 1000 * tries);
+      if (e === 'net' && ++tries < 14) setTimeout(again, 1000 * Math.min(5, tries)); // for about a minute: as long as the room keeps our place
       else leaveRoom(e === 'nf' ? 'ルームがなくなりました。' : e === 'full' ? 'ルームが満員になっていて、入り直せませんでした。' : 'ルームとの接続が切れました。');
     });
   };
   setTimeout(again, 400);
 }
-function leaveRoom(msg) {
+function leaveRoom(msg, keepSeat) { // keepSeat: another tab took our place, so the seat is that tab's now
   matchExit(false);
-  const s = sock; sock = null; R.code = ''; lastStand = null;
+  const s = sock; sock = null; R.code = ''; lastStand = null; if (!keepSeat) seatDrop();
   if (s) { try { s.ws.send(JSON.stringify({ t: 'bye' })); } catch (_) {} try { s.ws.close(1000); } catch (_) {} }
   try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
   loadMap(cfg.map); show('menu'); vsNote.textContent = msg || homeNote();
@@ -2356,18 +2402,26 @@ function onRoom(m) {
   if (state === 'lobby') { if (mapI !== R.map) loadMap(R.map); lobbyPaint(); }
   if (online && state === 'pause') $('endBtn').hidden = R.you !== R.host;
 }
-function matchEnter() {
+function matchEnter(back) { // back: the seat saved before a reload, to carry on where we stood
   if (online || mySlot() < 0 || R.phase !== 'play') return;
+  if (back && back.g !== R.g) back = null;
   audioInit(); const M = MODES[R.mode];
   online = true; coop = !!M.coop; pvp = !coop;
   loadMap(R.map); clearField(); inbox.clear(); for (const n of [...remotes.keys()]) dropRemote(n); liveRemotes.length = 0;
   if (net.g !== R.g) { net.g = R.g; net.k = net.d = net.f = 0; net.dm = {}; } // back into the same match: the tallies carry on
+  if (back) { net.k = num(back.k) | 0; net.d = num(back.d) | 0; net.f = num(back.f) | 0; } // (also after a reload)
   Object.assign(net, { ending: false, seen: {}, lk: 0, dead: 0, sendT: 0, m: [], auth: false, authN: 0, ready: false, t0: time, snap: false, ev: [], kx: [], bl: [], hq: {}, rh: [], pc: [] }); net.claimed.clear(); net.spent.clear();
   killLogEl.textContent = ''; setAim(false); hudEl.bossRow.hidden = true; vsBoardEl._sig = '';
   roomOp({ t: 'ig', v: 1 });
   show('play'); keepAwake();
-  if (pvp) { net.pick = true; pickShow('武器を選ぶ', 'この一丁で戦う。倒されたら選び直せる'); }
-  else { net.pick = false; wave = 0; score = 0; queue = []; breakT = 0; spawnT = 1; coopSpawn(); announce('協力', '仲間とドローンを迎え撃て'); }
+  const stand = back && !back.dn && num(back.hp) > 0; // alive when the page went away: back to the same spot, with the same health and gun
+  if (pvp && !stand) { net.pick = true; pickShow('武器を選ぶ', 'この一丁で戦う。倒されたら選び直せる'); }
+  else if (pvp) { net.pick = false; pickI = clamp(num(back.w) | 0, 0, WEAPONS.length - 1); vsRespawn(); }
+  else { net.pick = false; wave = 0; score = 0; queue = []; breakT = 0; spawnT = 1; coopSpawn(); if (!back) announce('協力', '仲間とドローンを迎え撃て'); else if (!stand) { net.dead = Infinity; pickShow('倒された', '仲間が今の波を制圧すると復帰する', true); } }
+  if (stand) {
+    P.x = clamp(num(back.x), -LX, LX); P.z = clamp(num(back.z), -LZ, LZ); P.y = clamp(num(back.y), 0, 12); P.ey = P.y + EYEH; P.vy = 0; P.yaw = num(back.yaw); P.pitch = 0;
+    P.hp = clamp(num(back.hp), 1, 100); if (coop) setWeapon(clamp(num(back.w) | 0, 0, WEAPONS.length - 1), true);
+  }
 }
 function matchExit(ended) { // ended: the match is over for everyone (otherwise only this page goes back to the room)
   if (!online) return;
@@ -2479,11 +2533,15 @@ joinRow.addEventListener('submit', e => {
   e.preventDefault(); const code = joinCode.value.replace(/\D/g, ''); if (code.length !== 4) { vsNote.textContent = '4桁のルーム番号を入れてください。'; joinCode.focus(); return; }
   joinRoom(code);
 });
-async function joinRoom(code) { // by number, or from the room list
-  audioInit(); if (busy || !SERVER || !needName()) return;
-  busyOn(true); vsNote.textContent = `ルーム ${code} に接続しています…`; seenG = -1;
-  try { await connect(code, 'join'); } catch (err) { busyOn(false); vsNote.textContent = (ERR[err] || ERR.net)(code); return; }
+async function joinRoom(code, back) { // by number, or from the room list. back: the seat saved before the page was closed or reloaded
+  if (!back) audioInit(); if (busy || !SERVER || !needName()) return;
+  busyOn(true); vsNote.textContent = back ? `ルーム ${code} に戻っています…` : `ルーム ${code} に接続しています…`; seenG = -1;
+  try { await connect(code, 'join'); } catch (err) { busyOn(false); if (back) seatDrop(); vsNote.textContent = back ? (err === 'nf' ? `ルーム ${code} はもうありません。` : `ルーム ${code} に戻れませんでした。`) : (ERR[err] || ERR.net)(code); return; }
   busyOn(false); enterLobby();
+  const me = member(R.you);
+  if (back && me && me[4] && R.phase === 'play' && back.g === R.g) { // still in that match: straight back to where we stood, paused until a tap (sound and the mouse need one)
+    matchEnter(back); pause(); $('lead').textContent = '再読み込みする前の場所に戻りました。「再開する」で続きから。' + $('lead').textContent;
+  }
 }
 busyOn(false); vsNote.textContent = homeNote();
 
@@ -2562,6 +2620,11 @@ document.addEventListener('visibilitychange', homeChat);
 homeChat();
 { const c = (location.hash.match(/^#(\d{4})$/) || [])[1]; // an invite link: the number is filled in, one tap to go
   if (c && SERVER) { joinCode.value = c; joinRow.hidden = false; vsNote.textContent = `招待されたルーム ${c} に入るには、名前を入れて「入る」を押してください。`; } }
+// Opened again soon after closing or reloading while in a room: go back in, as the same player, to the same place
+if (SERVER && myName) idReady.then(() => {
+  const s = store.get(seatKey(), null);
+  if (s && /^\d{4}$/.test(s.code) && Date.now() - num(s.at) < SEAT_KEEP && state === 'menu' && !R.code) joinRoom(s.code, s); else if (s) seatDrop();
+});
 
 /* ---------- loop ---------- */
 let baseFov = 72, wasScoped = false, crossD = 0, crossO = 0.5;
@@ -2590,7 +2653,7 @@ function drawRadar() {
 const mateEls = [], mv = new THREE.Vector3(), MARGIN = 22; let mateT = 0;
 for (let i = 0; i < 7; i++) { const el = document.createElement('div'), d = document.createElement('i'), t = document.createElement('span'); el.className = 'mate'; el.style.display = 'none'; el.append(d, t); $('hud').append(el); mateEls.push({ el, t, on: false, key: '' }); }
 function drawMates(dt) {
-  const list = online && state === 'play' ? liveRemotes.filter(r => r.mate) : [], recheck = (mateT -= dt) <= 0;
+  const list = online && state === 'play' ? [...remotes.values()].filter(r => r.mate && r.alive) : [], recheck = (mateT -= dt) <= 0; // (one who has dropped out too, marked so)
   if (recheck) mateT = 0.15; // walls and distance a few times a second; the position every frame
   const W2 = innerWidth / 2, H2 = innerHeight / 2;
   mateEls.forEach((m, i) => {
@@ -2603,11 +2666,11 @@ function drawMates(dt) {
     else { x = W2 + mv.x * 1e4; y = H2 + (Math.abs(mv.x) < 0.01 ? 1e4 : -mv.y * 1e4); } // behind: out past the edge on its side (straight behind: the bottom)
     let dx = x - W2, dy = y - H2; const sx = (W2 - MARGIN) / Math.max(1e-6, Math.abs(dx)), sy = (H2 - MARGIN) / Math.max(1e-6, Math.abs(dy)), k = Math.min(sx, sy), edge = k < 1;
     if (edge) { x = W2 + dx * k; y = H2 + dy * k; }
-    const key = r.col + '|' + r.name + '|' + r.dist;
+    const tag = r.ghost ? ' 切断中' : r.away ? ' 離席' : '', key = r.col + '|' + r.name + '|' + r.dist + tag;
     if (!m.on) { m.on = true; m.el.style.display = ''; }
-    if (m.key !== key) { m.key = key; m.el.style.setProperty('--mc', r.col); m.t.textContent = `${r.name} ${r.dist}m`; }
+    if (m.key !== key) { m.key = key; m.el.style.setProperty('--mc', r.col); m.t.textContent = `${r.name} ${r.dist}m${tag}`; }
     m.el.classList.toggle('occ', !!r.occ); m.el.classList.toggle('edge', edge);
-    m.el.style.opacity = edge ? 0.65 : r.occ ? 0.5 : 0.92;
+    m.el.style.opacity = r.ghost ? 0.4 : edge ? 0.65 : r.occ ? 0.5 : 0.92;
     m.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-5px)`;
   });
 }
@@ -2617,7 +2680,7 @@ const IDLE = { x: 0, y: 0, ey: EYEH, z: 0, idle: true }, meT = { me: true, x: 0,
 function targets(up) {
   const out = [];
   if (up) { meT.x = P.x; meT.y = P.y; meT.ey = P.ey; meT.z = P.z; meT.n = online ? R.you : 0; out.push(meT); }
-  if (coop) for (const r of liveRemotes) { const t = r.tgt; t.x = r.x; t.y = r.py; t.ey = r.py + EYEH; t.z = r.z; t.n = r.n; out.push(t); }
+  if (coop) for (const r of liveRemotes) { if (r.away) continue; const t = r.tgt; t.x = r.x; t.y = r.py; t.ey = r.py + EYEH; t.z = r.z; t.n = r.n; out.push(t); } // (a player who is away is left alone)
   return out;
 }
 // where player n is, as this page sees it (a drone's target, sent along with it so every page draws it facing the right way)
@@ -2784,9 +2847,18 @@ function playerStep(dt) {
   if (firing || mouseFire || (cfg.auto && lockOn)) fire();
 }
 
-let last = performance.now(), hudT = 0;
+let last = performance.now(), hudT = 0, frameAt = last;
+// A hidden tab gets no animation frames, but its timers still run (about once a second). Keep the match going from here meanwhile,
+// so the player stays where they stood: still sending, still in the standings, and in versus still able to be shot.
+const asleep = () => document.hidden || performance.now() - frameAt > 500;
+let napAt = 0;
+setInterval(() => {
+  if (!online || performance.now() - frameAt < 500) { napAt = 0; return; } // (frames still coming: the loop does it)
+  const now = performance.now(), dt = napAt ? Math.min(2, (now - napAt) / 1000) : 0; napAt = now; time += dt;
+  netSync(dt, true);
+}, 250);
 function frame(now) {
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); frameAt = now;
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (state === 'play') update(dt, true); else if (online) update(dt, false); // a match does not stop for one paused page
   // effects tick in every state so they settle while paused frames render

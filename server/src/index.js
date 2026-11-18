@@ -10,7 +10,8 @@ const MAX = 8;                     // ひとつのルームに入れる人数
 const SLOTS = [8, 8, 6, 8, 8];     // モードごとの枠の数：1v1v…, 2v2v…, 3v3, 4v4, 協力
 const SIZE = [1, 2, 3, 4, 8];      // 1チームの人数
 const MAPS = 6;
-const GRACE = 20000;               // 回線が切れた人の枠を取っておく時間
+const GRACE = 60000;               // 回線が切れた人（タブを閉じた・再読み込みした・回線が切れた）の枠と試合の居場所を取っておく時間
+const HOST_WAIT = 10000;           // ホストの回線がこれだけ切れていたら、つながっている人へホストを渡す
 const STALE = 75000;               // これだけ ping が来なければ回線は死んでいる（裏に回したタブのタイマーは1分に1回まで落ちるので、それより長く）
 const TICK = 15000;                // 人がいるあいだの見回りの間隔
 const BEAT = 600000;               // ルームがホームの一覧へ「まだある」と知らせる間隔（変化がなくても）。1回＝1リクエストなので長めに
@@ -154,8 +155,10 @@ export class Room extends DurableObject {
       const ms = this.members();
       if (!ms.length) this.room = null;
       else {
-        if (!ms.some(m => m.n === r.host)) { const on = ms.filter(m => !m.off); r.host = (on.length ? on : ms).reduce((a, b) => (a.n < b.n ? a : b)).n; }
-        if (r.phase === 'play' && !ms.some(m => m.ig)) r.phase = 'lobby';
+        const h = ms.find(m => m.n === r.host), on = ms.filter(m => !m.off), was = r.host;
+        if (!h || (h.off && Date.now() - h.off > HOST_WAIT && on.length)) r.host = (on.length ? on : ms).reduce((a, b) => (a.n < b.n ? a : b)).n; // いなくなった、または戻ってこないホストの代わり
+        if (r.host !== was) changed = true;
+        if (r.phase === 'play' && !ms.some(m => m.ig)) { r.phase = 'lobby'; changed = true; }
         if (r.phase === 'lobby') for (const m of ms) m.ig = 0;
       }
     }
