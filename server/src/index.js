@@ -13,8 +13,9 @@ const MAPS = 4;
 const GRACE = 20000;               // 回線が切れた人の枠を取っておく時間
 const STALE = 75000;               // これだけ ping が来なければ回線は死んでいる（裏に回したタブのタイマーは1分に1回まで落ちるので、それより長く）
 const TICK = 15000;                // 人がいるあいだの見回りの間隔
-const BEAT = 60000;                // ルームがホームの一覧へ「まだある」と知らせる間隔（変化がなくても）
-const GONE = 150000;               // これだけ知らせがないルームは一覧から外す
+const BEAT = 600000;               // ルームがホームの一覧へ「まだある」と知らせる間隔（変化がなくても）。1回＝1リクエストなので長めに
+const GONE = 1500000;              // これだけ知らせがないルームは一覧から外す（消えたことを知らせられなかったルーム用）
+const HOME_TICK = 60000;           // ホームの見回りの間隔（1回＝1リクエスト）
 
 const clean = (v, n) => Array.from(String(v || '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/g, '').trim()).slice(0, n).join('');
 
@@ -201,7 +202,7 @@ export class Home extends DurableObject {
     this.ctx.acceptWebSocket(ws); ws.serializeAttachment({ t: Date.now(), at: 0 });
     ws.send(JSON.stringify({ t: 'hi', log: await this.log(), n: this.live().length, rooms: (await this.rooms()).list }));
     this.cast({ t: 'n', n: this.live().length }, ws); // ほかの人へ、増えた人数を
-    if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + TICK);
+    if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + HOME_TICK);
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -247,6 +248,6 @@ export class Home extends DurableObject {
     if (gone) this.count();
     const { all, list, pruned } = await this.rooms();
     if (pruned) { await this.ctx.storage.put('rooms', all); this.cast({ t: 'rooms', rooms: list }); }
-    if (this.ctx.getWebSockets().length) await this.ctx.storage.setAlarm(now + TICK);
+    if (this.ctx.getWebSockets().length) await this.ctx.storage.setAlarm(now + HOME_TICK);
   }
 }
