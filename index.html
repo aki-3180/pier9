@@ -60,6 +60,13 @@ body{background:var(--night);color:var(--signal);font-family:var(--f-body);overf
 #scoreBox{text-align:right}
 #score{font-size:22px;font-weight:700;line-height:1.1}
 #radar{width:84px;height:84px;border-radius:50%;background:var(--panel);border:1px solid var(--line)}
+#radarBox{display:flex;flex-direction:column;align-items:center;gap:3px}
+/* online only: time left in a versus match, and the round trip to the room server */
+#netInfo{display:none;flex-direction:column;align-items:center;gap:1px;font-family:var(--f-data,inherit);font-size:10px;font-weight:700;line-height:1.15;color:var(--steel);text-shadow:0 1px 1px var(--ink)}
+body.online #netInfo{display:flex}
+#clock:empty,#ping:empty{display:none}
+#clock.low{color:var(--sodium,#ffb347)}
+#ping.ok{color:#8fdc4a}#ping.mid{color:#ffe14d}#ping.bad{color:#ff6b5a}
 #pauseBtn{pointer-events:auto;width:44px;height:44px;border:1px solid var(--line);background:var(--panel);color:var(--signal);
   border-radius:4px;display:grid;place-items:center;padding:0;cursor:pointer}
 #pauseBtn i{display:block;width:12px;height:14px;border-left:4px solid currentColor;border-right:4px solid currentColor}
@@ -233,6 +240,7 @@ body.editing .mate{display:none!important}
 #pick p{margin:0;font-size:13px;font-weight:700}
 #pickTitle{font-family:var(--f-display);font-size:18px!important;font-weight:400!important;letter-spacing:.08em}
 #pickNote{color:var(--steel)}
+#pickRecap{white-space:pre-line;font-weight:500!important;line-height:1.5;color:var(--signal)}
 #pickList{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 #pickList button{display:grid;gap:2px;min-width:96px;min-height:52px;padding:8px 10px;touch-action:manipulation}
 #pickList b{font-family:var(--f-data);font-size:16px}
@@ -365,7 +373,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
   <div id="killLog" aria-live="polite"></div>
   <div id="topRight">
     <div id="scoreBox"><div class="label">得点</div><div id="score" class="data">0</div></div>
-    <canvas id="radar" width="168" height="168"></canvas>
+    <div id="radarBox"><canvas id="radar" width="168" height="168"></canvas><div id="netInfo"><span id="clock"></span><span id="ping"></span></div></div>
     <button id="chatBtn" aria-label="チャット">会話</button>
     <button id="pauseBtn" aria-label="一時停止"><i></i></button>
   </div>
@@ -387,7 +395,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
   </div>
   <button id="fireBtn" aria-label="射撃">射撃</button>
   <form id="chatBar" hidden><input id="chatText" maxlength="40" autocomplete="off" spellcheck="false" enterkeyhint="send" placeholder="メッセージ（40文字まで）" aria-label="メッセージ"><button class="ghost solid" id="chatSend">送信</button></form>
-  <div id="pick" hidden><p id="pickTitle"></p><div id="pickList"></div><p id="pickNote"></p></div>
+  <div id="pick" hidden><p id="pickTitle"></p><p id="pickRecap" hidden></p><div id="pickList"></div><p id="pickNote"></p></div>
 </div>
 
 <div id="overlay">
@@ -1983,7 +1991,7 @@ function show(mode) {
   $('endBtn').hidden = !(mode === 'pause' && online && R.you === R.host); $('vsTable').hidden = !(mode === 'pause' && online);
   if (menu) { titleText(); $('heading').innerHTML = '第九<span>埠頭</span>'; $('lead').hidden = false; $('stats').hidden = true; $('go').textContent = '勤務開始'; }
   if (mode === 'pause') {
-    $('eyebrow').textContent = online ? `ルーム ${R.code} ／ ${MODES[R.mode].name} ／ ` + (coop ? `第${wave}波 ／ 得点 ${score}` : `撃破 ${net.k} ／ 被撃破 ${net.d}` + (R.lim > 0 ? ` ／ ${R.lim}キル先取` : '')) : `第${wave}波 ／ 得点 ${score}`;
+    $('eyebrow').textContent = online ? `ルーム ${R.code} ／ ${MODES[R.mode].name} ／ ` + (coop ? `第${wave}波 ／ 得点 ${score}` : `撃破 ${net.k} ／ 被撃破 ${net.d}` + (R.lim > 0 ? ` ／ ${R.lim}キル先取` : '') + (R.endAt ? ` ／ 残り${Math.max(1, Math.ceil((R.endAt - performance.now()) / 60000))}分` : '')) : `第${wave}波 ／ 得点 ${score}`;
     $('heading').textContent = online ? '離席中' : '一時停止';
     $('lead').hidden = !online; if (online) { $('lead').textContent = pvp ? '離席中もその場に残ります。相手からは見えていて、撃たれると倒されます。' : '離席中もその場に残り、ドローンは動き続けます。離席中は狙われず、撃たれません。'; vsBoard($('vsTable'), 99); }
     $('stats').hidden = true; $('go').textContent = '再開する';
@@ -2000,7 +2008,7 @@ const keepAwake = () => { if (navigator.wakeLock && !wakeLock) navigator.wakeLoc
 $('go').addEventListener('click', () => {
   audioInit();
   if (state !== 'pause') { online = pvp = coop = false; resetGame(); }
-  show('play'); keepAwake();
+  show('play'); keepAwake(); inputAt = performance.now();
 });
 $('pauseBtn').addEventListener('click', pause);
 loadMap(cfg.map); titleText();
@@ -2022,7 +2030,7 @@ const MODES = [
 ];
 const COLORS = [['橙', '#ff8a3d'], ['青緑', '#27d3b8'], ['桃', '#ff5fa2'], ['黄', '#ffe14d'], ['青', '#4d9bff'], ['白', '#f2f5f0'], ['紫', '#b98cff'], ['緑', '#8fdc4a']];
 // the room as the server last described it. ps: one [number, name, slot, connected, in the match] per member
-const R = { code: '', you: 0, host: 0, mode: 0, map: 0, phase: 'lobby', g: 0, ps: [], last: null, lim: 0 }; // lim: kills that win a versus match (0: endless; null: the server predates it)
+const R = { code: '', you: 0, host: 0, mode: 0, map: 0, phase: 'lobby', g: 0, ps: [], last: null, lim: 0, endAt: 0 }; // endAt: when a versus match runs out of time (performance.now(); 0: no limit known) // lim: kills that win a versus match (0: endless; null: the server predates it)
 const teamPlay = () => { const M = MODES[R.mode]; return !M.coop && M.size > 1; };
 const teamOf = slot => slot < 0 ? -1 : Math.floor(slot / MODES[R.mode].size);
 const slotCol = slot => slot < 0 ? COL.steel : COLORS[(teamPlay() ? teamOf(slot) : slot) % COLORS.length][1]; // a team shares its colour; otherwise each slot has its own
@@ -2037,8 +2045,9 @@ const num = v => typeof v === 'number' && isFinite(v) ? v : 0, clamp = (v, a, b)
    dead: seconds until we are back (Infinity in co-op: until the wave is down). pick: waiting for the first weapon. m: chat lines to send.
    Co-op — auth: this page flies the drones (authN: whichever page does). ready: has caught up with the match, so may be chosen to fly them.
    ev/kx/bl: wave events, kills and drone shots to pass on. hq: hits on drones to report. rh: rams that hit us. pc: health packs taken.
-   claimed/spent: packs and rams already used up here, so a late report does not bring them back. */
-const net = { won: -1, ending: false, g: -1, k: 0, d: 0, lk: 0, f: 0, dm: {}, seen: {}, dead: 0, pick: false, sendT: 0, m: [],
+   claimed/spent: packs and rams already used up here, so a late report does not bring them back.
+   cd: seconds left of the countdown at the start of a match (nobody moves or shoots). taken: damage each rival has done us this life (for the recap when we go down). */
+const net = { cd: 0, taken: {}, idleWarn: false, won: -1, ending: false, g: -1, k: 0, d: 0, lk: 0, f: 0, dm: {}, seen: {}, dead: 0, pick: false, sendT: 0, m: [],
   auth: false, authN: 0, ready: false, t0: 0, snap: false, ev: [], kx: [], bl: [], hq: {}, rh: [], pc: [], claimed: new Set(), spent: new Set(), wiped: -1 };
 // One weapon per life in versus: chosen before the first spawn, and again while waiting to come back.
 const pickEl = $('pick'); let pickI = 1;
@@ -2047,11 +2056,11 @@ const pickBtns = WEAPONS.map((w, i) => {
   b.className = 'ghost'; n.textContent = `${i + 1} ${w.name}`; t.textContent = w.tip; b.append(n, t);
   b.addEventListener('click', () => pickWeapon(i)); $('pickList').append(b); return b;
 });
-function pickShow(title, note, bare) { $('pickTitle').textContent = title; $('pickNote').textContent = note; $('pickList').hidden = !!bare; pickBtns.forEach((b, k) => b.setAttribute('aria-pressed', String(!net.pick && k === pickI))); pickEl.hidden = false; }
+function pickShow(title, note, bare, recap) { $('pickTitle').textContent = title; $('pickNote').textContent = note; $('pickRecap').textContent = recap || ''; $('pickRecap').hidden = !recap; $('pickList').hidden = !!bare; pickBtns.forEach((b, k) => b.setAttribute('aria-pressed', String(!net.pick && k === pickI))); pickEl.hidden = false; }
 function pickWeapon(i) {
   if (!pvp || state !== 'play' || !(net.pick || net.dead > 0)) return;
   pickI = i; tone('square', 320, 520, 0.05, 0.06);
-  if (net.pick) { net.pick = false; vsRespawn(); net.sendT = 0; announce(`${MODES[R.mode].name} 開始`, remotes.size ? '相手を見つけて撃て' : '相手が来るのを待っています'); sfx.wave(); }
+  if (net.pick) { net.pick = false; vsRespawn(); net.sendT = 0; if (!(net.cd > 0)) { announce(`${MODES[R.mode].name} 開始`, remotes.size ? '相手を見つけて撃て' : '相手が来るのを待っています'); sfx.wave(); } } // (during the countdown it announces the start)
   else pickBtns.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
 }
 const remotes = new Map(), inbox = new Map(); // by player number: the figures drawn, and what each page has sent since the last frame
@@ -2111,7 +2120,7 @@ function netSend(away) { // away: paused, or the tab is hidden. The player stays
   const s = { g: R.g, x: +P.x.toFixed(2), z: +P.z.toFixed(2), y: +P.y.toFixed(2), yaw: +P.yaw.toFixed(3), pt: +P.pitch.toFixed(3),
     a: net.dead > 0 || net.pick ? 0 : 1, d: net.d, lk: net.lk, k: net.k, f: net.f, hp: Math.max(0, Math.ceil(P.hp)) };
   if (away) s.af = 1;
-  if (pvp) s.dm = net.dm;
+  if (pvp) { s.dm = net.dm; s.w = wi; }
   if (net.m.length) { s.m = net.m; net.m = []; }
   if (coop) {
     if (!net.ready || asleep()) s.nr = 1; // a hidden tab gets about one tick a second: too few to fly the drones
@@ -2131,7 +2140,7 @@ function vsRespawn() { // in a two-team mode each team has its own half of the s
   const S = MAP.spawns, M = MODES[R.mode], t = teamOf(mySlot()), pool = M.teams === 2 && M.size > 1 ? S.filter((_, i) => i % 2 === t % 2) : S;
   const foes = liveRemotes.filter(r => !r.mate); let best = pool[Math.random() * pool.length | 0], bestD = -1;
   if (foes.length) for (const s of pool) { let m = 1e9; for (const r of foes) m = Math.min(m, Math.hypot(r.x - s[0], r.z - s[1])); if (m > bestD) { bestD = m; best = s; } }
-  P.x = best[0]; P.z = best[1]; P.yaw = Math.atan2(P.x, P.z); P.y = 0; P.vy = 0; P.ey = EYEH; P.pitch = 0; P.hp = 100; setWeapon(pickI, true); refill(); net.dead = 0; hurtA = 0; pickEl.hidden = true;
+  net.taken = {}; P.x = best[0]; P.z = best[1]; P.yaw = Math.atan2(P.x, P.z); P.y = 0; P.vy = 0; P.ey = EYEH; P.pitch = 0; P.hp = 100; setWeapon(pickI, true); refill(); net.dead = 0; hurtA = 0; pickEl.hidden = true;
 }
 function coopSpawn() { // side by side at the map's start, a step apart by slot
   const s = Math.max(0, mySlot()), [sx, sz] = MAP.start;
@@ -2179,7 +2188,7 @@ function netSync(dt, away) { // away: paused here, or the tab is hidden. The mat
       r.d = d;
       if (pvp && !r.mate) { // damage this player says it has dealt us
         const dealt = s.dm && typeof s.dm === 'object' ? num(s.dm[R.you]) : 0, was = net.seen[n];
-        if (was !== undefined && dealt > was && net.dead <= 0 && !net.pick) { P.hp -= Math.min(dealt - was, 110); hitter = r; }
+        if (was !== undefined && dealt > was && net.dead <= 0 && !net.pick) { const dmg = Math.min(dealt - was, 110); P.hp -= dmg; hitter = r; net.taken[n] = (net.taken[n] || 0) + dmg; }
         net.seen[n] = dealt;
       }
       if (coop) coopTake(r, s);
@@ -2187,7 +2196,7 @@ function netSync(dt, away) { // away: paused here, or the tab is hidden. The mat
     }
     b.q.length = 0;
     const s = r.last; if (!s) continue;
-    r.tx = clamp(num(s.x), -LX, LX); r.tz = clamp(num(s.z), -LZ, LZ); r.tyaw = num(s.yaw); r.tpy = clamp(num(s.y), 0, 12); r.pitch = clamp(num(s.pt), -1.2, 1.2); r.k = num(s.k) | 0; r.hp = num(s.hp); r.alive = s.a === 1; r.away = s.af === 1;
+    r.tx = clamp(num(s.x), -LX, LX); r.tz = clamp(num(s.z), -LZ, LZ); r.tyaw = num(s.yaw); r.tpy = clamp(num(s.y), 0, 12); r.pitch = clamp(num(s.pt), -1.2, 1.2); r.k = num(s.k) | 0; r.hp = num(s.hp); r.alive = s.a === 1; r.away = s.af === 1; r.w = s.w === undefined ? -1 : clamp(num(s.w) | 0, 0, WEAPONS.length - 1);
     ghostly(r, !p[3] || now - b.at > QUIET);
     const k = r.fresh ? 1 : Math.min(1, dt * 12); r.fresh = false;
     r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.py += (r.tpy - r.py) * k; r.y = r.py + 1.25; const da = r.tyaw - r.yaw; r.yaw += Math.atan2(Math.sin(da), Math.cos(da)) * k;
@@ -2197,10 +2206,44 @@ function netSync(dt, away) { // away: paused here, or the tab is hidden. The mat
   for (const n of [...remotes.keys()]) if (!inbox.has(n)) dropRemote(n);
   if (hitter) {
     hurtFrom(hitter.x, hitter.z);
-    if (P.hp <= 0) { P.hp = 0; net.dead = 3; net.d++; net.lk = hitter.n; setAim(false); pickI = wi; killLog(hitter.name, hitter.col, myName, myCol()); pickShow(`${hitter.name}に撃たれた`, '3秒で復帰。武器を替えるなら今選ぶ' + (touchMode ? '' : '（1〜5 キー）')); sfx.boom(); net.sendT = 0; }
+    if (P.hp <= 0) { P.hp = 0; net.dead = 3; net.d++; net.lk = hitter.n; setAim(false); pickI = wi; killLog(hitter.name, hitter.col, myName, myCol()); pickShow(`${hitter.name}に撃たれた`, '3秒で復帰。武器を替えるなら今選ぶ' + (touchMode ? '' : '（1〜5 キー）'), false, recap(hitter)); sfx.boom(); net.sendT = 0; }
   } else if (pvp && net.dead > 0 && !away) { net.dead -= dt; if (net.dead <= 0) { vsRespawn(); net.sendT = 0; } } // down while away: back once we return
+  if (net.cd > 0) { const was = Math.ceil(net.cd); net.cd -= dt; const n = Math.ceil(net.cd); if (n !== was) countdown(n); }
+  if (idleCheck(now)) return; // left the match for idling
   if (coop) coopWipe(); else versusWin();
   if ((net.sendT -= dt) <= 0) { net.sendT = away && !net.auth ? 0.5 : 0.1; netSend(away); } // a page away from the game sends less, unless it flies the drones
+}
+// How we went down (versus): the gun and range it came from, the health the shooter had left, and who did how much this life
+function recap(r) {
+  const w = r.w >= 0 ? WEAPONS[r.w].name : '', far = Math.round(Math.hypot(r.x - P.x, r.z - P.z));
+  const by = Object.entries(net.taken).map(([n, v]) => { const o = remotes.get(+n); return [o ? o.name : '？', Math.round(v)]; }).sort((a, b) => b[1] - a[1]);
+  return `${w ? w + '・' : ''}${far}m から。相手の残り体力 ${Math.max(0, Math.ceil(r.hp))}\n受けたダメージ：` + by.map(([a, v]) => `${a} ${v}`).join('、');
+}
+// The countdown at the start of a match: 3, 2, 1, then go
+function countdown(n) {
+  if (n > 0) { announce(String(n), '試合開始まで'); tone('square', 520, 520, 0.08, 0.06); return; }
+  if (coop) announce('協力', '仲間とドローンを迎え撃て'); else announce(`${MODES[R.mode].name} 開始`, '相手を見つけて撃て');
+  sfx.wave();
+}
+/* Idling: no input for three minutes (paused, a hidden tab, or just standing there) takes us out of the match, back to the room,
+   so nobody stands about in a match for good. A warning comes 30 s before. Being down in co-op (waiting for the wave to fall) is not idling. */
+const IDLE_OUT = 180, IDLE_WARN = 30;
+let inputAt = performance.now(), idleNote = '';
+const touched = () => { if (state === 'play') inputAt = performance.now(); };
+for (const ev of ['keydown', 'pointerdown', 'pointermove', 'mousemove', 'touchstart', 'touchmove', 'wheel']) addEventListener(ev, touched, { passive: true, capture: true });
+function idleCheck(now) {
+  if (net.ending || (coop && net.dead > 0)) { inputAt = now; return false; }
+  const left = IDLE_OUT - (now - inputAt) / 1000;
+  if (left <= 0) {
+    idleNote = '3分間操作がなかったので、試合から外れました。枠はそのままです。「試合に参加する」で戻れます。';
+    matchExit(false); show('lobby'); return true;
+  }
+  if (left > IDLE_WARN) net.idleWarn = false;
+  else if (!net.idleWarn) {
+    net.idleWarn = true; const t = `操作がないと、あと${IDLE_WARN}秒で試合から外れます`;
+    if (state === 'play') { announce('操作がありません', t); tone('square', 660, 440, 0.15, 0.08); } else if (state === 'pause') $('lead').textContent = t + '。' + $('lead').textContent;
+  }
+  return false;
 }
 /* Co-op: the drones are flown by one page, the lowest-numbered one that is caught up and was heard from in the last 1.5 s
    (a page in a hidden tab stops sending, so the next one takes over). Every page flies the bolts and checks only the ones reaching its own player;
@@ -2213,8 +2256,8 @@ function coopElect(now) {
   if (net.auth && !was) { // carry on from the last word of the page that flew them
     for (const e of enemies) if (e.tx !== undefined) { e.x = e.tx; e.y = e.ty; e.z = e.tz; }
     spawnT = Math.max(spawnT, 1);
-    if (!net.snap && wave === 0) startWave(1); // nobody was flying any: the match starts here
   } else if (!net.auth && was) for (const e of enemies) { e.tx = e.x; e.ty = e.y; e.tz = e.z; }
+  if (net.auth && wave === 0 && !(net.cd > 0)) startWave(1); // not started yet: the page flying the drones starts it once the countdown is over
 }
 function coopTake(r, s) { // the co-op part of one message from another page
   if (Array.isArray(s.bl) && !net.auth) for (const v of s.bl.slice(0, 80)) if (Array.isArray(v) && v.length >= 9)
@@ -2341,7 +2384,8 @@ function connect(code, op) {
     ws.onmessage = ev => {
       const d = ev.data; if (typeof d !== 'string') return;
       if (d.charCodeAt(0) === 83) { if (sock && sock.ws === ws) onState(d); return; } // "S": another player's state
-      let m; try { m = JSON.parse(d); } catch (_) { return; } // ("pong" lands here)
+      if (d === 'pong') { if (sock && sock.ws === ws) gotPong(); return; }
+      let m; try { m = JSON.parse(d); } catch (_) { return; }
       if (!m || typeof m !== 'object') return;
       if (m.t === 'err') { if (!done) { done = true; clearTimeout(t); reject(String(m.e)); } return; }
       if (m.t === 'room') { if (!done) { done = true; clearTimeout(t); sock = { ws, code }; resolve(); } if (sock && sock.ws === ws) onRoom(m); }
@@ -2360,6 +2404,26 @@ function sockSend(text, bulk) { // bulk: game state, dropped rather than queued 
 }
 const roomOp = o => sockSend(JSON.stringify(o));
 setInterval(() => sockSend('ping'), 15000); // answered by the server without waking the room; a line silent for 75 s is dropped there
+/* In a match: the round trip to the room server (a ping every 3 s, answered without waking the room, so it costs next to nothing
+   beside the ten state messages a second), and in versus the time left of the hour. Both shown small under the radar. */
+const pingEl = $('ping'), clockEl = $('clock'); let pingAt = 0, rtt = 0, clockSay = 0;
+function gotPong() {
+  if (!pingAt) return; const ms = performance.now() - pingAt; pingAt = 0;
+  rtt = rtt ? rtt * 0.6 + ms * 0.4 : ms; const v = Math.round(rtt); // smoothed, so one slow answer does not jump
+  pingEl.textContent = v + 'ms'; pingEl.className = v < 80 ? 'ok' : v < 160 ? 'mid' : 'bad';
+}
+setInterval(() => {
+  if (!online || !sock) { pingAt = 0; rtt = 0; pingEl.textContent = ''; return; }
+  if (pingAt && performance.now() - pingAt > 6000) { pingAt = 0; pingEl.textContent = '応答なし'; pingEl.className = 'bad'; }
+  if (!pingAt && sockSend('ping')) pingAt = performance.now();
+}, 3000);
+setInterval(() => {
+  const left = online && pvp && R.endAt ? Math.max(0, (R.endAt - performance.now()) / 1000) : -1;
+  if (left < 0) { clockEl.textContent = ''; clockSay = 0; return; }
+  const m = Math.floor(left / 60), sec = Math.floor(left % 60);
+  clockEl.textContent = left >= 600 ? `残り${Math.ceil(left / 60)}分` : `残り${m}:${String(sec).padStart(2, '0')}`; clockEl.classList.toggle('low', left < 300);
+  for (const at of [600, 300, 60]) if (left <= at && left > at - 5 && clockSay !== at) { clockSay = at; if (state === 'play') announce(`残り${at / 60}分`, '1時間で試合終了'); } // a word at 10, 5 and 1 minutes left
+}, 500);
 function onState(data) {
   const sp = data.indexOf(' '), n = +data.slice(1, sp); if (!online || !(n > 0) || n === R.you) return;
   let s; try { s = JSON.parse(data.slice(sp + 1)); } catch (_) { return; }
@@ -2391,18 +2455,19 @@ function onRoom(m) {
   R.code = String(m.code || R.code); R.you = num(m.you) | 0; R.host = num(m.host) | 0; R.mode = clamp(num(m.mode) | 0, 0, MODES.length - 1); R.map = clamp(num(m.map) | 0, 0, MAPS.length - 1);
   R.phase = m.phase === 'play' ? 'play' : 'lobby'; R.g = num(m.g) | 0; R.ps = Array.isArray(m.ps) ? m.ps.filter(p => Array.isArray(p) && p.length >= 5) : []; R.last = m.last && typeof m.last === 'object' ? m.last : null;
   R.lim = m.lim === undefined ? null : clamp(num(m.lim) | 0, 0, 999);
+  R.endAt = R.phase === 'play' && num(m.left) > 0 ? performance.now() + num(m.left) : 0; // a versus match ends an hour after it began (sent as the time left, so clocks need not agree)
   if (online && !net.ending && (R.phase !== 'play' || R.g !== net.g || mySlot() < 0)) { // the match is over (or our place went)
-    if (R.phase !== 'play' && R.last && R.last.v === 'win') { // someone reached the kill count: show who for a moment, then everyone goes back to the room
-      net.ending = true; announce(winText(R.last), '試合終了　ルームに戻ります'); sfx.wave();
+    if (R.phase !== 'play' && R.last && (R.last.v === 'win' || R.last.v === 'time')) { // someone reached the kill count, or the hour is up: say so for a moment, then everyone goes back to the room
+      net.ending = true; announce(R.last.v === 'time' ? '時間切れ' : winText(R.last), R.last.v === 'time' ? '1時間たったので試合終了　ルームに戻ります' : '試合終了　ルームに戻ります'); sfx.wave();
       setTimeout(() => { net.ending = false; if (online) { matchExit(true); show('lobby'); } }, 2600);
     } else { matchExit(R.phase !== 'play' || R.g !== net.g); show('lobby'); }
   }
-  if (!online && state === 'lobby' && R.phase === 'play' && seenG >= 0 && R.g !== seenG && mySlot() >= 0) matchEnter(); // the host started one
+  if (!online && state === 'lobby' && R.phase === 'play' && seenG >= 0 && R.g !== seenG && mySlot() >= 0) matchEnter(null, true); // the host started one
   seenG = R.g;
   if (state === 'lobby') { if (mapI !== R.map) loadMap(R.map); lobbyPaint(); }
   if (online && state === 'pause') $('endBtn').hidden = R.you !== R.host;
 }
-function matchEnter(back) { // back: the seat saved before a reload, to carry on where we stood
+function matchEnter(back, fresh) { // back: the seat saved before a reload, to carry on where we stood. fresh: the host has just started it (a countdown first)
   if (online || mySlot() < 0 || R.phase !== 'play') return;
   if (back && back.g !== R.g) back = null;
   audioInit(); const M = MODES[R.mode];
@@ -2410,18 +2475,20 @@ function matchEnter(back) { // back: the seat saved before a reload, to carry on
   loadMap(R.map); clearField(); inbox.clear(); for (const n of [...remotes.keys()]) dropRemote(n); liveRemotes.length = 0;
   if (net.g !== R.g) { net.g = R.g; net.k = net.d = net.f = 0; net.dm = {}; } // back into the same match: the tallies carry on
   if (back) { net.k = num(back.k) | 0; net.d = num(back.d) | 0; net.f = num(back.f) | 0; } // (also after a reload)
-  Object.assign(net, { ending: false, seen: {}, lk: 0, dead: 0, sendT: 0, m: [], auth: false, authN: 0, ready: false, t0: time, snap: false, ev: [], kx: [], bl: [], hq: {}, rh: [], pc: [] }); net.claimed.clear(); net.spent.clear();
+  inputAt = performance.now(); idleNote = '';
+  Object.assign(net, { cd: fresh ? 3 : 0, taken: {}, idleWarn: false, ending: false, seen: {}, lk: 0, dead: 0, sendT: 0, m: [], auth: false, authN: 0, ready: false, t0: time, snap: false, ev: [], kx: [], bl: [], hq: {}, rh: [], pc: [] }); net.claimed.clear(); net.spent.clear();
   killLogEl.textContent = ''; setAim(false); hudEl.bossRow.hidden = true; vsBoardEl._sig = '';
   roomOp({ t: 'ig', v: 1 });
   show('play'); keepAwake();
   const stand = back && !back.dn && num(back.hp) > 0; // alive when the page went away: back to the same spot, with the same health and gun
   if (pvp && !stand) { net.pick = true; pickShow('武器を選ぶ', 'この一丁で戦う。倒されたら選び直せる'); }
   else if (pvp) { net.pick = false; pickI = clamp(num(back.w) | 0, 0, WEAPONS.length - 1); vsRespawn(); }
-  else { net.pick = false; wave = 0; score = 0; queue = []; breakT = 0; spawnT = 1; coopSpawn(); if (!back) announce('協力', '仲間とドローンを迎え撃て'); else if (!stand) { net.dead = Infinity; pickShow('倒された', '仲間が今の波を制圧すると復帰する', true); } }
+  else { net.pick = false; wave = 0; score = 0; queue = []; breakT = 0; spawnT = 1; coopSpawn(); if (!back && !fresh) announce('協力', '仲間とドローンを迎え撃て'); else if (!stand) { net.dead = Infinity; pickShow('倒された', '仲間が今の波を制圧すると復帰する', true); } }
   if (stand) {
     P.x = clamp(num(back.x), -LX, LX); P.z = clamp(num(back.z), -LZ, LZ); P.y = clamp(num(back.y), 0, 12); P.ey = P.y + EYEH; P.vy = 0; P.yaw = num(back.yaw); P.pitch = 0;
     P.hp = clamp(num(back.hp), 1, 100); if (coop) setWeapon(clamp(num(back.w) | 0, 0, WEAPONS.length - 1), true);
   }
+  if (fresh) countdown(3);
 }
 function matchExit(ended) { // ended: the match is over for everyone (otherwise only this page goes back to the room)
   if (!online) return;
@@ -2447,8 +2514,8 @@ function lobbyPaint() {
   limEl.hidden = !(lim > 0); limEl.disabled = !host || play; if (document.activeElement !== limEl) limEl.value = lim || '';
   $('lbWinNote').hidden = !!M.coop;
   $('lbWinNote').textContent = old ? (host ? 'ルームサーバーが古いため、勝利条件は選べません（エンドレスのみ）。README の手順で server をデプロイし直すと使えます。' : '')
-    : lim > 0 ? (teamPlay() ? `チームの合計が ${lim} キルに届いたチームの勝ち。` : `${lim} キルに届いた人の勝ち。`) + '決着したら全員ルームに戻ります。'
-    : '時間切れもキル上限もなし。ホストが「試合を終える」を押すまで続きます。';
+    : lim > 0 ? (teamPlay() ? `チームの合計が ${lim} キルに届いたチームの勝ち。` : `${lim} キルに届いた人の勝ち。`) + '決着したら全員ルームに戻ります。1時間で決着しなければ、そこで終わります。'
+    : 'キル上限なし。ホストが「試合を終える」を押すか、始まってから1時間で終わります。';
   const by = new Map(); for (const p of R.ps) if (p[2] >= 0) by.set(p[2], p);
   const box = $('lbTeams'); box.textContent = '';
   const groups = M.size === 1 || M.coop ? [{ label: M.coop ? '協力' : '個人戦', from: 0, n: M.teams * M.size, col: '' }]
@@ -2477,9 +2544,9 @@ function lobbyPaint() {
   const ready = R.ps.some(p => p[2] >= 0 && p[3]);
   $('lbHostRow').hidden = !host || play; $('lbStart').disabled = !ready;
   $('lbJoin').hidden = !(play && mine >= 0); $('lbEnd').hidden = !(play && host);
-  lbNote.textContent = play ? (mine >= 0 ? '試合中です。「試合に参加する」で途中から入れます。' : '試合中です。空いている枠に入ると、途中から参加できます。')
+  lbNote.textContent = (idleNote && play && mine >= 0 ? idleNote + ' ' : '') + (play ? (mine >= 0 ? '試合中です。「試合に参加する」で途中から入れます。' : '試合中です。空いている枠に入ると、途中から参加できます。')
     : host ? (ready ? 'あなたがホストです。モード・マップ・勝利条件を選んで「開始」。枠に入っている人が試合に出ます。「ランダム」で全員をランダムに振り分けます。' : 'あなたがホストです。だれかが枠に入ると開始できます。')
-    : `モード・マップ・勝利条件・ランダム・開始は、ホストの ${hostP ? hostP[1] : '？'} さんが決めます。空いている枠を押すと入れます。`;
+    : `モード・マップ・勝利条件・ランダム・開始は、ホストの ${hostP ? hostP[1] : '？'} さんが決めます。空いている枠を押すと入れます。`);
   // the last match
   const lb = $('lbLastBox'), co = R.last && R.last.co, L = lastStand; let text = '';
   if (co) text = `${co === 1 ? '全滅' : '終了'}　第${num(R.last.w) | 0}波まで　得点 ${num(R.last.sc) | 0}`;
@@ -2489,6 +2556,7 @@ function lobbyPaint() {
     if (L.tp) { const rows = boardRows(L.all, 99, true).filter(r => r.ps), top = rows.filter(r => r.rk === 1); text = top.length > 1 ? '引き分け' : `${teamName(top[0].team)}の勝ち`; }
     else text = '1位：' + L.all.filter(r => r.rk === 1).map(r => r.n).join('・');
   }
+  if (R.last && R.last.v === 'time') text = '時間切れ（1時間）' + (text ? '　' + text : '');
   lb.hidden = !text; $('lbLastText').textContent = text; $('lbLast').hidden = !L;
   if (L) { $('lbLast')._sig = ''; drawBoard($('lbLast'), L.all, boardRows(L.all, 99, L.tp), L.coop); }
 }
@@ -2501,7 +2569,7 @@ $('lbLim').addEventListener('change', limSend);
 $('lbLim').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); limSend(); $('lbLim').blur(); } });
 $('lbRand').addEventListener('click', () => roomOp({ t: 'rand' }));
 $('lbStart').addEventListener('click', () => { audioInit(); roomOp({ t: 'start' }); });
-$('lbJoin').addEventListener('click', matchEnter);
+$('lbJoin').addEventListener('click', () => matchEnter());
 const endMatch = () => roomOp({ t: 'end', res: coop ? { co: 2, w: wave, sc: score } : null });
 $('lbEnd').addEventListener('click', endMatch); $('endBtn').addEventListener('click', endMatch);
 $('lbLeave').addEventListener('click', () => leaveRoom());
@@ -2739,7 +2807,7 @@ function nearest(tgs, e) { let best = null, bd = 1e9; for (const t of tgs) { con
 // live: the player is in play. Otherwise (paused, or laying out buttons) a match carries on around this page without it.
 function update(dt, live) {
   time += dt;
-  const up = live && !(online && (net.dead > 0 || net.pick || net.ending)); // standing and in play
+  const up = live && !(online && (net.dead > 0 || net.pick || net.ending || net.cd > 0)); // standing and in play
   if (up) playerStep(dt);
   else { ads = Math.max(0, ads - dt * W.ar); if (lockOn) { lockOn = false; hudEl.cross.classList.remove('lock'); } } // the gun comes down while waiting to spawn
   if (online) { netSync(dt, !live); if (!online) return; } // (the match can end while syncing)
