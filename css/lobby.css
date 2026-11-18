@@ -1,0 +1,42 @@
+/* The room screen: room number, mode, map, win condition, slots. */
+/* room: the code, the mode and map (the host sets them), and the slots everyone picks from */
+#lobby{position:fixed;inset:0;overflow-y:auto;display:flex;z-index:5;
+  padding-top:calc(20px + var(--sat));padding-bottom:calc(20px + var(--sab));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:linear-gradient(100deg,rgba(5,8,15,.95) 0%,rgba(5,8,15,.86) 50%,rgba(5,8,15,.6) 100%)}
+#lobbySheet{margin:auto 0;width:100%;max-width:920px;display:grid;gap:22px 40px;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:start}
+#lobbySheet>div{min-width:0;display:flex;flex-direction:column;gap:12px}
+#lbCodeRow{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+#lbCode{font-family:var(--f-data);font-size:clamp(48px,14vw,72px);font-weight:700;line-height:.9;letter-spacing:.12em;color:var(--sodium)}
+#lbCodeRow .ghost{margin-bottom:4px}
+#lbMode button,#lbMap button{padding-left:8px;padding-right:8px}
+.seg.ro button{cursor:default}
+.seg.ro button[aria-pressed="false"]{opacity:.55}
+#lbModeNote,#lbNote,#lbWinNote{margin:0;font-size:13px;line-height:1.6;color:var(--steel)}
+.winCtl{display:flex;gap:8px;align-items:center}
+#lbWin button{padding-left:8px;padding-right:8px}
+#lbLim{width:4.6em;font-family:var(--f-data);font-size:18px;font-weight:700;padding:6px 8px;min-height:40px;box-sizing:border-box;background:var(--ink);color:var(--sodium);border:1px solid var(--line);border-radius:4px;text-align:center;-webkit-user-select:text;user-select:text}
+#lbLim:disabled{color:var(--signal);opacity:1}
+#lbLim:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
+#lbNote b{color:var(--signal)}
+#lbHostRow{display:grid;grid-template-columns:auto 1fr;gap:10px}
+#lbStart{font-family:var(--f-display);font-size:20px;letter-spacing:.12em;padding:12px 18px;border:0;border-radius:4px;background:var(--sodium);color:var(--ink);cursor:pointer;min-height:54px}
+#lbStart:disabled{background:rgba(238,242,234,.14);color:var(--steel);cursor:default}
+#lbTeams{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.team{border:1px solid var(--line);border-top:3px solid var(--tc,var(--line));border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:6px;background:rgba(8,13,24,.55)}
+.team h3{margin:0 0 2px;font-size:12px;letter-spacing:.14em;color:var(--tc,var(--steel));display:flex;justify-content:space-between}
+.team h3 span{color:var(--steel);font-family:var(--f-data)}
+.slot{display:flex;align-items:center;gap:8px;min-height:42px;padding:6px 10px;border-radius:4px;border:1px dashed var(--line);background:none;color:var(--steel);
+  font-family:var(--f-body);font-weight:700;font-size:14px;text-align:left;cursor:pointer;touch-action:manipulation}
+.slot i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--sc,var(--steel))}
+.slot .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot small{flex:none;font-size:10px;letter-spacing:.08em;padding:2px 5px;border-radius:3px;border:1px solid currentColor}
+.slot.taken{border-style:solid;color:var(--signal);background:rgba(238,242,234,.06);cursor:default}
+.slot.me{border-color:var(--sodium);background:rgba(255,179,71,.16);cursor:pointer}
+.slot.off .nm{color:var(--steel)}
+.slot:disabled{cursor:default}
+.slot:disabled:not(.taken){opacity:.5}
+#lbWait{font-size:13px;color:var(--steel);line-height:1.7;margin:0}
+#lbWait b{color:var(--signal);font-weight:700}
+#lbLastBox{display:flex;flex-direction:column;gap:6px}
+#lbLastBox p{margin:0;font-size:13px;font-weight:700}
