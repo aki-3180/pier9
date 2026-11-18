@@ -264,10 +264,23 @@ h1 span{color:var(--sodium)}
   background:var(--sodium);color:var(--ink);cursor:pointer;min-height:60px}
 #go:active{transform:translateY(1px)}
 button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
+/* the room list on the title screen: every open room, one tap to go in */
+#homeRooms{display:flex;flex-direction:column;gap:8px;max-width:30em;padding-top:10px;border-top:1px solid var(--line)}
+#hrList{display:flex;flex-direction:column;gap:6px;max-height:212px;overflow-y:auto;overscroll-behavior:contain}
+#hrList button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:2px 12px;width:100%;text-align:left;padding:8px 12px;min-height:48px;border-radius:4px;
+  background:var(--panel);border:1px solid var(--line);color:var(--signal);font-family:var(--f-body);font-size:13px;font-weight:700;cursor:pointer}
+#hrList button:not(:disabled):hover{border-color:var(--sodium)}
+#hrList button:disabled{opacity:.5;cursor:default}
+#hrList .code{grid-row:span 2;font-family:var(--f-data);font-size:20px;color:var(--sodium);font-variant-numeric:tabular-nums}
+#hrList .sub{grid-column:2;color:var(--steel);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hrList .cnt{grid-row:span 2;grid-column:3;text-align:right;font-family:var(--f-data);font-size:15px;font-variant-numeric:tabular-nums}
+#hrList .cnt small{display:block;font-family:var(--f-body);font-size:11px;color:var(--hull)}
+#hrList .cnt small.play{color:var(--alarm)}
+#hrList .none{margin:0;font-size:12px;line-height:1.6;color:var(--steel)}
 /* home chat: everyone on the title screen at the same moment */
 #homeChat{display:flex;flex-direction:column;gap:8px;max-width:30em;padding-top:10px;border-top:1px solid var(--line)}
-#hcHead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14px;font-weight:700}
-#hcCount{font-family:var(--f-data);font-size:12px;color:var(--hull);font-variant-numeric:tabular-nums}
+#homeRooms .hcHead,#homeChat .hcHead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14px;font-weight:700}
+#hcCount,#hrCount{font-family:var(--f-data);font-size:12px;color:var(--hull);font-variant-numeric:tabular-nums}
 #hcLog{height:150px;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:3px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:4px;font-size:13px;line-height:1.45;-webkit-user-select:text;user-select:text}
 #hcLog div{overflow-wrap:anywhere}
 #hcLog b{color:var(--sodium);margin-right:6px}
@@ -383,8 +396,12 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
         <div><span class="label">到達</span><b id="stWave">1</b></div>
         <div><span class="label">自己最高</span><b id="stBest">0</b></div>
       </div>
+      <section id="homeRooms" hidden aria-label="いまあるルーム">
+        <div class="hcHead"><span>いまあるルーム</span><span id="hrCount"></span></div>
+        <div id="hrList"></div>
+      </section>
       <section id="homeChat" hidden aria-label="ホームの会話">
-        <div id="hcHead"><span>ホームの会話</span><span id="hcCount"></span></div>
+        <div class="hcHead"><span>ホームの会話</span><span id="hcCount"></span></div>
         <div id="hcLog" role="log" aria-live="polite"></div>
         <form id="hcBar"><input id="hcText" maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="send" placeholder="メッセージ（60文字まで）" aria-label="ホームの会話に送るメッセージ"><button class="ghost solid" id="hcSend" disabled>送信</button></form>
         <p id="hcNote"></p>
@@ -2178,14 +2195,16 @@ mkBtn.addEventListener('click', async () => {
 });
 joinBtn.addEventListener('click', () => { joinRow.hidden = !joinRow.hidden; if (!joinRow.hidden) joinCode.focus(); });
 joinCode.addEventListener('input', () => { joinCode.value = joinCode.value.replace(/\D/g, '').slice(0, 4); });
-joinRow.addEventListener('submit', async e => {
-  e.preventDefault(); audioInit(); if (busy || !SERVER) return;
-  const code = joinCode.value.replace(/\D/g, ''); if (code.length !== 4) { vsNote.textContent = '4桁のルーム番号を入れてください。'; joinCode.focus(); return; }
-  if (!needName()) return;
+joinRow.addEventListener('submit', e => {
+  e.preventDefault(); const code = joinCode.value.replace(/\D/g, ''); if (code.length !== 4) { vsNote.textContent = '4桁のルーム番号を入れてください。'; joinCode.focus(); return; }
+  joinRoom(code);
+});
+async function joinRoom(code) { // by number, or from the room list
+  audioInit(); if (busy || !SERVER || !needName()) return;
   busyOn(true); vsNote.textContent = `ルーム ${code} に接続しています…`; seenG = -1;
   try { await connect(code, 'join'); } catch (err) { busyOn(false); vsNote.textContent = (ERR[err] || ERR.net)(code); return; }
   busyOn(false); enterLobby();
-});
+}
 busyOn(false); vsNote.textContent = homeNote();
 
 /* the home chat: everyone who has the title screen open right now, through one shared line on the room server (/home).
@@ -2213,11 +2232,12 @@ function hcOpen() {
     let m; try { m = JSON.parse(ev.data); } catch (_) { return; } if (!m || typeof m !== 'object') return; // ("pong" lands here)
     if (m.t === 'hi') { hc.ok = true; hcLog.textContent = ''; (Array.isArray(m.log) ? m.log : []).forEach(e => hcRow(e, false));
       if (!hcLog.children.length) { const p = document.createElement('div'); p.className = 'none'; p.textContent = 'まだ発言はありません。'; hcLog.append(p); }
-      hcLog.scrollTop = hcLog.scrollHeight; hcNote.textContent = ''; $('hcSend').disabled = false; }
+      hcLog.scrollTop = hcLog.scrollHeight; hcNote.textContent = ''; $('hcSend').disabled = false; hrEl.hidden = !Array.isArray(m.rooms); hrPaint(m.rooms); }
+    if (m.t === 'rooms') { hrEl.hidden = false; hrPaint(m.rooms); }
     if (m.t === 'hi' || m.t === 'n') hcCount.textContent = `ホーム画面に ${Math.max(1, num(m.n) | 0)}人`;
     if (m.t === 'say') hcRow(m.e, !!m.me);
   };
-  ws.onclose = () => { if (hc.ws !== ws) return; hc.ws = null; hc.ok = false; $('hcSend').disabled = true; hcCount.textContent = ''; hcRetry(); };
+  ws.onclose = () => { if (hc.ws !== ws) return; hc.ws = null; hc.ok = false; $('hcSend').disabled = true; hcCount.textContent = ''; hrEl.hidden = true; hcRetry(); };
 }
 function hcRetry() {
   if (!hc.want) return;
@@ -2225,11 +2245,27 @@ function hcRetry() {
   hc.timer = setTimeout(hcOpen, Math.min(30000, 1000 * 2 ** hc.tries++));
 }
 function homeChat() { // called whenever the screen changes or the tab is shown or hidden
-  const on = !!SERVER && state === 'menu'; hcEl.hidden = !on;
+  const on = !!SERVER && state === 'menu'; hcEl.hidden = !on; if (!on) hrEl.hidden = true;
   hc.want = on && !document.hidden;
   if (hc.want) { if (!hc.ws) { hc.tries = 0; hcOpen(); } return; }
   clearTimeout(hc.timer); const ws = hc.ws; hc.ws = null; hc.ok = false; $('hcSend').disabled = true;
   if (ws) { try { ws.close(1000); } catch (_) {} }
+}
+const hrEl = $('homeRooms'), hrList = $('hrList'), hrCount = $('hrCount');
+function hrPaint(list) { // one row per room: number, mode and map, host, people, waiting or playing
+  const rooms = (Array.isArray(list) ? list : []).filter(r => r && /^\d{4}$/.test(String(r.code))).slice(0, 50);
+  hrList.textContent = ''; hrCount.textContent = rooms.length ? `${rooms.length}部屋` : '';
+  if (!rooms.length) { const p = document.createElement('p'); p.className = 'none'; p.textContent = 'いまはルームがありません。「ルームを作る」で作れます。'; hrList.append(p); return; }
+  for (const r of rooms) {
+    const n = clamp(num(r.n) | 0, 0, 99), max = clamp(num(r.max) | 0, 1, 99) || 8, M = MODES[clamp(num(r.mode) | 0, 0, MODES.length - 1)], mp = MAPS[clamp(num(r.map) | 0, 0, MAPS.length - 1)];
+    const lim = !M.coop && num(r.lim) > 0 ? `・${num(r.lim) | 0}キル先取` : '', host = cleanName(r.host), play = r.phase === 'play', full = n >= max;
+    const b = document.createElement('button'), c = document.createElement('span'), t = document.createElement('span'), u = document.createElement('span'), k = document.createElement('span'), st = document.createElement('small');
+    c.className = 'code'; c.textContent = r.code; t.textContent = `${M.name}・${mp.name}${lim}`; u.className = 'sub'; u.textContent = host ? `ホスト ${host}` : '';
+    k.className = 'cnt'; k.textContent = `${n}/${max}`; st.textContent = full ? '満員' : play ? '試合中' : '待機中'; if (play || full) st.className = 'play'; k.append(st);
+    b.append(c, t, k, u); b.disabled = full; b.title = full ? '満員です' : `ルーム ${r.code} に入る`;
+    b.addEventListener('click', () => joinRoom(String(r.code)));
+    hrList.append(b);
+  }
 }
 let hcAt = 0;
 $('hcBar').addEventListener('submit', e => {
