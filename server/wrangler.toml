@@ -9,6 +9,15 @@ compatibility_date = "2025-06-01"
 name = "ROOMS"
 class_name = "Room"
 
+# ホーム画面のチャットは、全員で Durable Object を1つ共有する
+[[durable_objects.bindings]]
+name = "HOME"
+class_name = "Home"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Home"]
