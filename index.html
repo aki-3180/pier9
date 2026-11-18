@@ -259,7 +259,13 @@ h1 span{color:var(--sodium)}
 .seg button{background:none;border:0;color:var(--steel);font:inherit;padding:8px 10px;min-width:44px;min-height:40px;white-space:nowrap;cursor:pointer}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--signal);color:var(--ink)}
-#mapSeg button{padding-left:8px;padding-right:8px} /* five names in a row on a narrow phone */
+#mapSeg button{padding-left:8px;padding-right:8px}
+#mapRow,#lbMapRow{flex-wrap:wrap;row-gap:6px}
+@media (max-width:480px){ /* six names do not fit in one row on a narrow phone: three by two, under the label */
+  #mapSeg,#lbMap{display:grid;grid-template-columns:repeat(3,1fr);width:100%}
+  #mapSeg button:nth-child(3n+1),#lbMap button:nth-child(3n+1){border-left:0}
+  #mapSeg button:nth-child(n+4),#lbMap button:nth-child(n+4){border-top:1px solid var(--line)}
+}
 #go{font-family:var(--f-display);font-size:22px;letter-spacing:.12em;padding:16px 20px;border:0;border-radius:4px;
   background:var(--sodium);color:var(--ink);cursor:pointer;min-height:60px}
 #go:active{transform:translateY(1px)}
@@ -410,7 +416,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
     <div>
       <div>
         <div class="opt" id="mapRow"><span>マップ</span>
-          <div class="seg" id="mapSeg"><button id="map0" data-v="0">コンテナ場</button><button id="map1" data-v="1">倉庫街</button><button id="map2" data-v="2">魚市場</button><button id="map3" data-v="3">横丁</button><button id="map4" data-v="4">上屋</button></div></div>
+          <div class="seg" id="mapSeg"><button id="map0" data-v="0">コンテナ場</button><button id="map1" data-v="1">倉庫街</button><button id="map2" data-v="2">魚市場</button><button id="map3" data-v="3">横丁</button><button id="map4" data-v="4">上屋</button><button id="map5" data-v="5">突堤</button></div></div>
         <div class="opt"><span>視点の感度</span>
           <div class="seg" id="sensSeg"><button id="sens0" data-v="0">低</button><button id="sens1" data-v="1">中</button><button id="sens2" data-v="2">高</button><button id="sens3" data-v="3">速</button><button id="sens4" data-v="4">最速</button></div></div>
         <div class="opt"><span>ボタン配置</span><button class="ghost" id="layBtn">変更する</button></div>
@@ -438,7 +444,7 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
         <li><b>狙う</b>狙うボタンで構える。拡大して弾のばらつきが減る。SR はスコープ、ほかはドットサイトを覗く</li>
         <li><b>武器</b>武器ボタンで SMG・AR・SR・LMG・SG を切り替え。対戦では出撃のたびに一丁だけ選ぶ</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる。倉庫街と魚市場の階段は歩くだけで上がれる</li>
-        <li><b>マップ</b>コンテナ場・倉庫街・魚市場・横丁・上屋の5つ。横丁は見通しが短く、SG 向き。上屋は屋根の下の撃ち合い。ルームではホストが選ぶ</li>
+        <li><b>マップ</b>コンテナ場・倉庫街・魚市場・横丁・上屋・突堤の6つ。横丁は見通しが短く、SG 向き。上屋は屋根の下の撃ち合い。突堤は見通しが長く、SR 向き。ルームではホストが選ぶ</li>
         <li><b>ルーム</b>名前を入れて「ルームを作る」か、4桁の番号で「ルームに参加」。モードは 1v1v…・2v2v…・3v3・4v4・協力。対戦は狙いの補正とオート射撃が無し、頭は1.4倍、倒すと体力 +50、3秒で復帰。会話ボタン（パソコンは Enter か T）でチャット</li>
         <li id="pcHow"><b>パソコン</b>WASD で移動、クリックで射撃、右クリックで構える、1〜5・Q・ホイールで武器、スペースで跳ぶ、R で装填</li>
       </ul>
@@ -454,8 +460,8 @@ button:focus-visible{outline:2px solid var(--hull);outline-offset:2px}
       <div class="opt"><span>モード</span>
         <div class="seg" id="lbMode"><button data-v="0">1v1v…</button><button data-v="1">2v2v…</button><button data-v="2">3v3</button><button data-v="3">4v4</button><button data-v="4">協力</button></div></div>
       <p id="lbModeNote"></p>
-      <div class="opt"><span>マップ</span>
-        <div class="seg" id="lbMap"><button data-v="0">コンテナ場</button><button data-v="1">倉庫街</button><button data-v="2">魚市場</button><button data-v="3">横丁</button><button data-v="4">上屋</button></div></div>
+      <div class="opt" id="lbMapRow"><span>マップ</span>
+        <div class="seg" id="lbMap"><button data-v="0">コンテナ場</button><button data-v="1">倉庫街</button><button data-v="2">魚市場</button><button data-v="3">横丁</button><button data-v="4">上屋</button><button data-v="5">突堤</button></div></div>
       <div class="opt" id="lbWinRow"><span>勝利条件</span>
         <span class="winCtl"><span class="seg" id="lbWin"><button data-v="0">エンドレス</button><button data-v="1">キル数</button></span>
           <input id="lbLim" type="number" inputmode="numeric" min="1" max="999" step="1" autocomplete="off" aria-label="勝ちになるキル数" hidden></span></div>
@@ -564,6 +570,7 @@ const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 // sky dome: sodium haze at the horizon fading to navy
 const skyTex = stops => canvasTex(16, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); stops.forEach(([o, c]) => gr.addColorStop(o, c)); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
 const SKY_NIGHT = skyTex([[0, '#04070e'], [0.34, '#0b1220'], [0.46, '#1c2233'], [0.5, '#4a3324'], [0.52, '#141a28'], [1, '#141a28']]);
+const SKY_DUSK = skyTex([[0, '#1d2747'], [0.3, '#4a4a6e'], [0.44, '#c27a5e'], [0.5, '#f2a65a'], [0.52, '#5a4a48'], [1, '#5a4a48']]);
 const SKY_DAY = skyTex([[0, '#3f7fcf'], [0.3, '#6fa6e0'], [0.46, '#cfe3f3'], [0.5, '#e6eef2'], [0.52, '#b9cfe0'], [1, '#b9cfe0']]);
 const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, map: SKY_NIGHT }));
 scene.add(sky);
@@ -574,6 +581,7 @@ scene.add(sky);
 const ENV = { // sky, fog and lights per time of day
   night: { sky: SKY_NIGHT, fog: [0x141a28, 18, 92], hemi: [0x7f95c4, 0x2a2018, 0.85], sun: [0x9db4e8, 0.35, -30, 50, 20] },
   day: { sky: SKY_DAY, fog: [0xc3d7e8, 30, 140], hemi: [0xe4efff, 0x8c8272, 1.1], sun: [0xfff0d0, 1.0, 35, 60, -25] },
+  dusk: { sky: SKY_DUSK, fog: [0xb08a74, 80, 280], hemi: [0xe6dcd4, 0x3a3c4a, 0.85], sun: [0xffb878, 0.9, -60, 22, 10] }, // low sun over the sea, far sight for the SR
   hall: { sky: SKY_DAY, fog: [0x6f6a62, 30, 120], hemi: [0xc9d2dc, 0x4a4238, 0.9], sun: [0xffdcaa, 0.75, -40, 40, -8] } // indoors by day: the sun low through the west windows
 };
 function setEnv(e) { sky.material.map = e.sky; scene.fog.color.setHex(e.fog[0]); scene.fog.near = e.fog[1]; scene.fog.far = e.fog[2]; hemi.color.setHex(e.hemi[0]); hemi.groundColor.setHex(e.hemi[1]); hemi.intensity = e.hemi[2]; moon.color.setHex(e.sun[0]); moon.intensity = e.sun[1]; moon.position.set(e.sun[2], e.sun[3], e.sun[4]); }
@@ -1378,6 +1386,112 @@ function buildHall(m) {
   K.done();
   m.g = g; m.boxes = K.bx; m.hard = K.bx.filter(b => !b.soft); m.lx = HX - 0.5; m.lz = HZ - 0.5; m.dx = HX - 1.6; m.dz = HZ - 1.6;
 }
+// map 5: the jetty at dusk, made for the SR in versus. 48 × 120 m, mirrored north to south (each team's half is the other's seen in a mirror).
+// Three ways from base to base: the quay along the water (west), open from end to end but for bollards; the field in the middle, containers and pipes
+// to hop between; the shed (east), roofed, crates inside, where no line is long. Each base has a watch house with a long window slit upstairs that looks down the field.
+function buildJetty(m) {
+  seed = 113;
+  const K = kit(), g = K.g, PI = Math.PI, HX = 24, HZ = 60;
+  const CONC = 0xb9b5aa, DARK = 0x1c222b, BLK = 0x0d1015, STEEL = 0x556070, YEL = 0xe0a81e, RUST = 0x8a5a3c, WALL = 0x8d969e, ROOF = 0x48505a, WHITE = 0xe2e6e2, BLUE = 0x2c5c9c, RED = 0xa5352f;
+  const gt = canvasTex(1024, 2048, (c, w, h) => {
+    c.fillStyle = '#5e5d5a'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 26000; i++) { const v = 60 + rnd() * 60 | 0; c.fillStyle = `rgba(${v},${v - 2},${v - 6},.35)`; c.fillRect(rnd() * w, rnd() * h, 2, 2); }
+    const sx = w / (HX * 2), sz = h / (HZ * 2); c.setTransform(sx, 0, 0, sz, HX * sx, HZ * sz);
+    const R = (x0, x1, z0, z1, f) => { c.fillStyle = f; c.fillRect(x0, z0, x1 - x0, z1 - z0); };
+    for (let z = -HZ + 6; z < HZ; z += 6) R(-HX, 9, z - 0.04, z + 0.04, 'rgba(20,20,22,.3)'); // joints in the apron
+    for (const z of [-46, 10]) R(9, HX, z, z + 36, 'rgba(30,30,34,.35)'); // under the sheds
+    R(-HX, -HX + 0.5, -HZ, HZ, 'rgba(224,168,30,.6)'); // the quay edge
+    for (const x of [-19.5, -18.5, -1.5, -0.5]) R(x - 0.05, x + 0.05, -HZ, HZ, 'rgba(150,150,150,.7)'); // the crane rails
+    for (const s of [-1, 1]) {
+      for (let x = -13; x < 8; x += 3.2) { c.strokeStyle = 'rgba(238,242,234,.35)'; c.lineWidth = 0.1; c.strokeRect(x, s > 0 ? 12 : -18, 2.6, 6); } // container lots
+      R(-17, 9, s * 46 - 0.06, s * 46 + 0.06, 'rgba(238,242,234,.4)');
+    }
+    for (let i = 0; i < 22; i++) { const x = -HX + 2 + rnd() * 30, z = -HZ + 3 + rnd() * (HZ * 2 - 6), r = 0.6 + rnd() * 1.8, gr = c.createRadialGradient(x, z, 0, x, z, r); gr.addColorStop(0, 'rgba(12,10,8,.4)'); gr.addColorStop(1, 'rgba(12,10,8,0)'); R(x - r, x + r, z - r, z + r, gr); }
+  });
+  gt.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  mk(new THREE.PlaneGeometry(HX * 2, HZ * 2), new THREE.MeshLambertMaterial({ map: gt }), 0, 0, 0, g).rotation.x = -PI / 2;
+  mk(new THREE.PlaneGeometry(300, HZ * 2 + 1.2), new THREE.MeshLambertMaterial({ color: 0x4a4a4c }), HX + 150, -0.02, 0, g).rotation.x = -PI / 2; // the land going on east
+  mk(new THREE.PlaneGeometry(800, 800), new THREE.MeshLambertMaterial({ color: 0x2a4658 }), 0, -1.0, 0, g).rotation.x = -PI / 2; // the sea
+  K.box('conc', -HX - 0.3, -HX, -1.0, 0, -HZ - 0.6, HZ + 0.6, 0x8d8a82, 0); K.box('conc', -HX, HX + 300, -1.0, 0, -HZ - 0.6, -HZ, 0x8d8a82, 0); K.box('conc', -HX, HX + 300, -1.0, 0, HZ, HZ + 0.6, 0x8d8a82, 0);
+  K.box('flat', -HX - 0.05, -HX + 0.25, 0, 0.18, -HZ, HZ, YEL, 0); // the kerb along the edge
+  cranes(g, [[70, -45, PI / 2], [70, 25, PI / 2], [-150, 90]], new THREE.MeshBasicMaterial({ color: 0x2e2a36, fog: false }));
+
+  // the gantry crane across the middle: legs to hide behind, a low sill between them; everything above is out of reach
+  for (const x of [-19, -1]) { for (const z of [-5, 5]) K.box('flat', x - 0.7, x + 0.7, 0, 14, z - 0.7, z + 0.7, 0xc4952e); K.box('flat', x - 0.5, x + 0.5, 0, 1.0, -4.3, 4.3, 0xa77a22); }
+  K.box('flat', -19.7, -0.3, 14, 15.6, -5.7, -4.3, 0xc4952e, 0); K.box('flat', -19.7, -0.3, 14, 15.6, 4.3, 5.7, 0xc4952e, 0);
+  K.box('flat', -48, 10, 15.6, 17, -1.2, 1.2, 0xc4952e, 0); K.box('flat', -14, -6, 17, 20, -3, 3, 0x9a7a2a, 0); K.box('lit', -14.05, -13.95, 18, 19, -1, 1, 0xffe0a0, 0);
+  for (const x of [-30, -40]) K.cyl('flat', x, 13, 0, 0.05, 5.2, 0, DARK);
+  // concrete pipes on the centre line, east of the crane
+  for (const z of [-0.66, 0.66]) K.cyl('conc', 6.5, 0.66, z, 0.66, 6, 1, 0xa8a49a); K.cyl('conc', 6.5, 1.85, 0, 0.62, 6, 1, 0xb0aca2); K.col(3.5, 9.5, 0, 1.32, -1.32, 1.32); K.col(3.5, 9.5, 1.32, 2.47, -0.62, 0.62);
+  // a trailer parked across the centre line in the shed gap: shots go under it
+  K.box('corr', 14.6, 17, 1.2, 3.8, -6, 6, 0x9aa3a8); K.box('flat', 14.8, 16.8, 0.8, 1.2, -6, 6, DARK, 0); for (const z of [-4.5, -3.3, 3.3]) { K.cyl('flat', 15.8, 0.5, z, 0.5, 2.3, 1, BLK); for (const x of [14.9, 16.7]) K.col(x - 0.18, x + 0.18, 0, 1.0, z - 0.5, z + 0.5); }
+  for (const z of [-5.5, 5.5]) K.box('flat', 15.6, 16, 0, 0.8, z - 0.15, z + 0.15, DARK);
+
+  for (const s of [1, -1]) { // s = 1 is written out below as the north half; s = -1 is its mirror image, the south half
+    const B = (mat, x0, x1, y0, y1, z0, z1, c, solid) => s > 0 ? K.box(mat, x0, x1, y0, y1, z0, z1, c, solid) : K.box(mat, x0, x1, y0, y1, -z1, -z0, c, solid);
+    const C = (mat, x, y, z, r, len, axis, c) => K.cyl(mat, x, y, s * z, r, len, axis, c);
+    const col = (x0, x1, y0, y1, z0, z1) => s > 0 ? K.col(x0, x1, y0, y1, z0, z1) : K.col(x0, x1, y0, y1, -z1, -z0);
+    const sg = (text, x, y, z, w, h, ry, bg, fg) => sign(g, text, x, y, s * z, w, h, s > 0 ? ry : PI - ry, bg, fg);
+    const light = (x, y, z, color, power, reach, size) => { const l = new THREE.PointLight(color, power, reach, 1.6); l.position.set(x, y, s * z); g.add(l); if (size) { const sp = glow(color, size); sp.position.copy(l.position); g.add(sp); } };
+    const crate = (x, z, y0) => B('wood', x - 0.7, x + 0.7, y0 || 0, (y0 || 0) + 1.3, z - 0.7, z + 0.7);
+    const jersey = (x0, x1, z) => { B('conc', x0, x1, 0, 0.9, z - 0.3, z + 0.3, 0xc4c4ba); B('flat', x0 + 0.2, x1 - 0.2, 0.55, 0.7, z - 0.31, z + 0.31, YEL, 0); };
+    const tetra = (x, z) => { for (let i = 0; i < 7; i++) { const a = i / 7 * PI * 2, r = i ? 1.0 : 0, cx = x + Math.cos(a) * r, cz = z + Math.sin(a) * r; C('conc', cx, 0.45 + (i % 2) * 0.5, cz, 0.32, 1.6, i % 3, 0xb3afa5); } col(x - 1.5, x + 1.5, 0, 1.6, z - 1.5, z + 1.5); };
+
+    // the seawall behind the base, and blocks beyond it
+    B('conc', -HX, HX, 0, 1.2, -HZ - 0.6, -HZ, CONC); for (let x = -20; x <= 20; x += 5) C('conc', x + (x % 2), 0.6, -HZ - 2, 0.5, 2, (x / 5 + 4) % 3, 0xa8a49a);
+
+    // the watch house: two floors. Downstairs a door south and a door east; a stair along the back wall; upstairs a long slit south, short slits west and east.
+    // The slits sit 1 m above the upper floor and are 0.75 m high: you see out with your head and shoulders, and cannot climb through
+    const X0 = -8, X1 = 2, Z0 = -56, Z1 = -50, FL = 3.38, RF = 6.4, SL = FL + 1.0, HD = FL + 1.75, W = (x0, x1, y0, y1, z0, z1) => B('conc', x0, x1, y0, y1, z0, z1, CONC);
+    W(X0, X1, 0, RF, Z0, Z0 + 0.3); // back
+    W(X0, X0 + 0.3, 0, SL, Z0 + 0.3, Z1); W(X0, X0 + 0.3, SL, HD, Z0 + 0.3, -54); W(X0, X0 + 0.3, SL, HD, -51, Z1); W(X0, X0 + 0.3, HD, RF, Z0 + 0.3, Z1); // west, a slit upstairs
+    W(X1 - 0.3, X1, 0, SL, Z0 + 0.3, -53.7); W(X1 - 0.3, X1, 2.2, SL, -53.7, -52.3); W(X1 - 0.3, X1, 0, SL, -52.3, Z1); W(X1 - 0.3, X1, SL, HD, Z0 + 0.3, -54); W(X1 - 0.3, X1, SL, HD, -51, Z1 - 0.3); W(X1 - 0.3, X1, HD, RF, Z0 + 0.3, Z1); // east: a door, a slit
+    W(X0 + 0.3, -6.8, 0, SL, Z1 - 0.3, Z1); W(-6.8, -5.4, 2.2, SL, Z1 - 0.3, Z1); W(-5.4, X1 - 0.3, 0, SL, Z1 - 0.3, Z1); W(X0 + 0.3, -7.4, SL, HD, Z1 - 0.3, Z1); W(1.4, X1 - 0.3, SL, HD, Z1 - 0.3, Z1); W(X0 + 0.3, X1 - 0.3, HD, RF, Z1 - 0.3, Z1); // south: a door, the long slit
+    for (let i = 1; i <= 13; i++) B('flat', X1 - 0.3 - 0.36 * (14 - i), X1 - 0.3 - 0.36 * (13 - i), 0, 0.26 * i, Z0 + 0.3, -54.3, i % 2 ? STEEL : 0x6a7686); // 13 steps of 0.26 m, up toward the east wall
+    B('conc', X0 + 0.3, X1 - 0.3, FL - 0.2, FL, -54.3, Z1 - 0.3, 0x9a9890); B('conc', X0 + 0.3, X1 - 0.3 - 0.36 * 13, FL - 0.2, FL, Z0 + 0.3, -54.3, 0x9a9890); // the upper floor, open over the stair
+    B('flat', X0 - 0.2, X1 + 0.2, RF, RF + 0.25, Z0 - 0.2, Z1 + 0.2, ROOF);
+    B('flat', X0 + 0.5, X0 + 1.6, FL, FL + 0.75, -53.5, -51.5, 0x6b5440); B('flat', -1.2, 0.8, FL, FL + 0.75, -51.4, -50.6, 0x6b5440); // tables upstairs, below the slits
+    B('flat', X0 + 0.4, X0 + 1.2, 0, 1.9, -55.6, -54.2, 0x7f8a93); B('wood', -4, -2.6, 0, 1.3, -51.9, -50.5);
+    B('lit', -3.4, -2.6, RF - 0.05, RF, -53, -52.6, 0xfff0d0, 0); light(-3, RF - 0.6, -52.8, 0xffe2b0, 0.6, 12);
+    B('lit', -3.4, -2.6, FL - 0.25, FL - 0.2, -52.4, -52, 0xfff0d0, 0);
+    sg('見張所', -3, HD + 0.6, Z1 + 0.02, 2.4, 0.6, 0, '#e9e2c8', '#1b2a3a');
+    B('flat', X1, X1 + 0.4, RF - 0.6, RF - 0.3, -52.5, -51.9, DARK, 0); light(X1 + 0.6, RF - 0.7, -52.2, 0xdfe8ff, 0.9, 30, 3.5); // floodlight over the east door
+
+    // the base: a box truck (shots pass under it), sandbags, a lamp on the quay
+    B('corr', 6, 8.4, 0.9, 3.3, -56.5, -51.5, WHITE); B('flat', 6.1, 8.3, 0.45, 2.5, -51.5, -49.6, BLUE); B('flat', 6.7, 7.7, 0.45, 0.9, -56.5, -51.5, DARK, 0);
+    for (const z of [-55.5, -52.2]) { C('flat', 7.2, 0.45, z, 0.45, 2.36, 1, BLK); for (const x of [6.2, 8.2]) col(x - 0.18, x + 0.18, 0, 0.9, z - 0.45, z + 0.45); }
+    for (let i = 0; i < 3; i++) B('flat', -17 + i * 0.05, -13 - i * 0.05, i * 0.3, i * 0.3 + 0.3, -48.6, -47.8, i % 2 ? 0x8f8463 : 0x9d9270);
+    B('flat', -23.4, -23.1, 0, 9, -47, -46.7, DARK); B('flat', -23.4, -21.8, 8.85, 9, -46.95, -46.75, DARK, 0); light(-21.9, 8.7, -46.85, 0xffb347, 1.2, 40, 6);
+
+    // the quay: bollards, a stack of fish boxes, a heap of wave blocks, boats tied up below the edge
+    for (const z of [-44, -34, -24, -14]) { C('flat', -23.2, 0.35, z, 0.28, 0.7, 0, 0x30353d); col(-23.5, -22.9, 0, 0.7, z - 0.3, z + 0.3); }
+    for (let i = 0; i < 4; i++) B('flat', -22.4, -20.6, i * 0.32, i * 0.32 + 0.32, -40.4, -39, i % 2 ? 0xd6dcdc : 0xe8ecec, 0); col(-22.4, -20.6, 0, 1.28, -40.4, -39);
+    tetra(-20.5, -29);
+    { const bz = s > 0 ? -33 : -18; B('flat', -31, -27.4, -1.2, 0.6, bz - 6, bz + 6, s > 0 ? 0xe8e4da : 0x2f5f8f, 0); B('flat', -30.6, -27.8, 0.6, 2.4, bz - 3.5, bz - 0.5, WHITE, 0); B('flat', -29.4, -29, 2.4, 6, bz - 2, bz - 1.6, DARK, 0); }
+
+    // the field: a single container to climb (a forward perch, open on every side), a double one too tall to climb, another near the base, barriers
+    B('corr', -13, -13 + CL, 0, CH, -38, -38 + CW, HULLS[0]); crate(-10, -38.75);
+    B('corr', -3, -3 + CW, 0, CH * 2, -30, -30 + CL, HULLS[1]); B('flat', -3.05, -0.51, CH - 0.04, CH + 0.04, -30.05, -23.85, DARK, 0);
+    B('corr', 2.6, 2.6 + CL, 0, CH, -44, -44 + CW, HULLS[2]);
+    jersey(-15, -12, -19); jersey(3.2, 6.2, -21); jersey(-9, -6, -12.5); jersey(-14.5, -11.5, -7);
+    for (let i = 0; i < 4; i++) B('flat', 5.4, 7.4, i * 0.3, i * 0.3 + 0.28, -13.6, -12.4, i % 2 ? 0x9d7a4a : 0xa98656, 0); col(5.4, 7.4, 0, 1.2, -13.6, -12.4); // pallets
+
+    // the shed: roofed, open at both ends, two doors onto the field. Inside, crates set so that no line runs far
+    const SX0 = 9, SZ0 = -46, SZ1 = -10, SH = 5;
+    B('corr', SX0, SX0 + 0.3, 0, SH, SZ0, -36.2, WALL); B('corr', SX0, SX0 + 0.3, 3, SH, -36.2, -33.8, WALL); B('corr', SX0, SX0 + 0.3, 0, SH, -33.8, -22.2, WALL); B('corr', SX0, SX0 + 0.3, 3, SH, -22.2, -19.8, WALL); B('corr', SX0, SX0 + 0.3, 0, SH, -19.8, SZ1, WALL);
+    B('corr', HX - 0.3, HX, 0, SH, -HZ, HZ * 0 - 10, WALL); B('corr', HX - 0.3, HX, 0, 3.2, -10, 0, 0x7a838b);
+    B('corr', SX0 - 0.2, HX + 0.2, SH, SH + 0.25, SZ0 - 0.4, SZ1 + 0.4, ROOF); B('flat', SX0 - 0.2, HX + 0.2, SH - 0.5, SH, SZ0 - 0.4, SZ0 - 0.2, DARK, 0); B('flat', SX0 - 0.2, HX + 0.2, SH - 0.5, SH, SZ1 + 0.2, SZ1 + 0.4, DARK, 0);
+    for (let z = SZ0 + 6; z < SZ1; z += 6) B('flat', 16.3, 16.7, 0, SH, z - 0.2, z + 0.2, STEEL);
+    crate(11, -43); crate(11, -43, 1.3); crate(12.4, -43); crate(20.5, -38); crate(21.9, -38); crate(21.9, -38, 1.3); crate(13.2, -30.5); crate(13.2, -29.1); crate(13.2, -29.1, 1.3);
+    crate(19.6, -25); crate(21, -25); crate(21, -26.4); crate(11.6, -16); crate(13, -16); crate(13, -16, 1.3); crate(20.8, -13.2); crate(20.8, -13.2, 1.3);
+    B('flat', 17.6, 19.4, 0, 1.0, -33.5, -32.3, YEL); B('flat', 17.8, 19.2, 1.0, 2.3, -33.4, -32.6, DARK, 0); col(17.8, 19.2, 1.0, 2.3, -33.4, -32.6); // a forklift, more or less
+    for (const z of [-40, -28, -16]) { B('lit', 16, 17, SH - 0.08, SH - 0.02, z - 0.3, z + 0.3, 0xfff0d0, 0); }
+    light(16.5, SH - 0.6, -34, 0xffd9a0, 0.6, 18); light(16.5, SH - 0.6, -19, 0xffd9a0, 0.6, 18);
+    sg('九番突堤', SX0 - 0.02, 4, -40, 4.2, 0.9, -PI / 2, '#e9e2c8', '#1b2a3a');
+  }
+  K.done();
+  m.g = g; m.boxes = K.bx; m.hard = K.bx.filter(b => !b.soft); m.lx = HX - 0.5; m.lz = HZ - 0.5; m.dx = HX - 1; m.dz = HZ - 1;
+}
 const MAPS = [
   { name: 'コンテナ場', tag: '9番バース', lead: '深夜のコンテナヤードで、警備ドローンが暴走した。波状に押し寄せる機体をすべて停止させ、朝まで持ち場を守れ。', build: buildYard,
     sides: [0, 1, 2, 3], start: [0, 4], cam: [9, 3.2, 0, 2, -0.02], spawns: [[-26, -26], [26, 26], [-26, 26], [26, -26], [8, -27], [-12, 27], [-27, 8], [27, 0]] },
@@ -1388,7 +1502,9 @@ const MAPS = [
   { name: '横丁', tag: '九番横丁', lead: '埠頭の裏の飲み屋横丁にも、暴走したドローンが入り込んだ。見通しは利かない。角を曲がれば、もう目の前だ。', build: buildAlley,
     sides: [0, 1, 2, 3], start: [1.2, 14.4], cam: [9, 9.5, 0, 0, -0.62], spawns: [[-14.9, -14.4], [14.9, 14.4], [14.9, -14.4], [-14.9, 14.4], [-1.2, -14.4], [1.2, 14.4], [14.8, 0], [-14.8, 0]] },
   { name: '上屋', tag: '九番上屋', day: true, env: 'hall', fly: 8.6, lead: '埠頭の古い上屋（荷さばきの倉庫）にも、暴走したドローンが高窓から入り込んだ。真ん中の足場に上がるか、車の陰で待つか。屋根の下では逃げ場がない。', build: buildHall,
-    sides: [0, 1, 2, 3], start: [0, 24.5], cam: [8, 7.5, 0, 0, -0.4], spawns: [[-6, -24.5], [6, 24.5], [8, -24.5], [-8, 24.5], [-15.6, -12], [15.6, 12], [0, -25.5], [0, 25.5]] } // fly: the drones come in at the high windows and stay under the roof
+    sides: [0, 1, 2, 3], start: [0, 24.5], cam: [8, 7.5, 0, 0, -0.4], spawns: [[-6, -24.5], [6, 24.5], [8, -24.5], [-8, 24.5], [-15.6, -12], [15.6, 12], [0, -25.5], [0, 25.5]] }, // fly: the drones come in at the high windows and stay under the roof
+  { name: '突堤', tag: '九番突堤', env: 'dusk', lead: '夕暮れの長い突堤。岸壁は端から端まで見通せる。見張所の窓から撃ち抜くか、上屋の陰を抜けて詰めるか。', build: buildJetty,
+    sides: [0, 1, 2, 3], start: [-14, 55], cam: [18, 9, -6, 0, -0.25], spawns: [[-14, -55], [-14, 55], [12, -55], [12, 55], [-21, -52], [-21, 52], [-3, -58.2], [-3, 58.2]] }
 ];
 function loadMap(i) {
   i = MAPS[i] ? i : 0; const m = MAPS[i];
@@ -1396,7 +1512,7 @@ function loadMap(i) {
   if (MAP) MAP.g.visible = false;
   MAP = m; mapI = i; m.g.visible = true; setEnv(ENV[m.env || (m.day ? 'day' : 'night')]); boxes = m.boxes; hard = m.hard; LX = m.lx; LZ = m.lz; best = store.get('best' + (i || ''), 0);
 }
-if (document.fonts && document.fonts.load) Promise.all(['Dela Gothic One', 'Zen Kaku Gothic New'].map(f => document.fonts.load(`700 32px "${f}"`, '第三倉庫管理棟火気厳禁九丸製氷漁協競り場居酒屋番処やきともつ焼横丁立ち飲み角打ん串かおでそばスナック汐灯ラーメン中華麻雀蓮囲碁将棋釣具えさな小路のべ波止通用心空室あ貸店舗たこ甘上事務所'))).then(() => redraws.forEach(f => f()), () => {});
+if (document.fonts && document.fonts.load) Promise.all(['Dela Gothic One', 'Zen Kaku Gothic New'].map(f => document.fonts.load(`700 32px "${f}"`, '第三倉庫管理棟火気厳禁九丸製氷漁協競り場居酒屋番処やきともつ焼横丁立ち飲み角打ん串かおでそばスナック汐灯ラーメン中華麻雀蓮囲碁将棋釣具えさな小路のべ波止通用心空室あ貸店舗たこ甘上事務所見張突堤'))).then(() => redraws.forEach(f => f()), () => {});
 
 /* ---------- weapon view model ---------- */
 gunScene.add(new THREE.HemisphereLight(0xb8c6e6, 0x40301c, 1.1));
@@ -1406,7 +1522,7 @@ const gl = new THREE.DirectionalLight(0xffc880, 0.8); gl.position.set(-1, 2, 1);
 const WEAPONS = [
   { name: 'SMG', tip: '連射最速・近距離', mag: 36, cd: 0.065, dmg: 8, pd: 9, n: 1, sp: 0.1, as: 0.33, fo: [12, 30, 0.5], rl: 1.1, zoom: 1.25, ar: 12, mv: 1.08, kick: 0.7, snd: [0.06, 6500, 1200, 0.16, 280], model: [0.34, 0.12, 0.014, 0.18, 0.036, 0] },
   { name: 'AR', tip: '標準・中距離', mag: 30, cd: 0.105, dmg: 12, pd: 14, n: 1, sp: 0.05, as: 0.17, fo: [30, 70, 0.75], rl: 1.4, zoom: 1.5, ar: 9, mv: 1, kick: 1, snd: [0.09, 5200, 700, 0.22, 190], model: [0.42, 0.3, 0.014, 0.14, 0.04, 0.14] },
-  { name: 'SR', tip: '一発が重い・狙って撃つ', mag: 5, cd: 1.2, dmg: 130, pd: 72, n: 1, sp: 0.2, as: 0, fo: [999, 1000, 1], rl: 2.2, zoom: 4, ar: 4.5, mv: 0.95, kick: 3, scope: true, snd: [0.28, 3800, 200, 0.4, 120], model: [0.46, 0.5, 0.013, 0.08, 0.04, 0.2] },
+  { name: 'SR', tip: '一発が重い・狙って撃つ', range: 160, mag: 5, cd: 1.2, dmg: 130, pd: 72, n: 1, sp: 0.2, as: 0, fo: [999, 1000, 1], rl: 2.2, zoom: 4, ar: 4.5, mv: 0.95, kick: 3, scope: true, snd: [0.28, 3800, 200, 0.4, 120], model: [0.46, 0.5, 0.013, 0.08, 0.04, 0.2] },
   { name: 'LMG', tip: '80発・足が遅い', mag: 80, cd: 0.095, dmg: 12, pd: 13, n: 1, sp: 0.11, as: 0.26, fo: [30, 70, 0.7], rl: 3.4, zoom: 1.4, ar: 5, mv: 0.82, kick: 1.2, snd: [0.1, 4200, 500, 0.24, 150], model: [0.5, 0.34, 0.017, 0.1, 0.1, 0.16] },
   { name: 'SG', tip: '散弾・至近距離', mag: 6, cd: 0.8, dmg: 9, pd: 13, n: 8, sp: 0.17, as: 0.56, fo: [7, 20, 0.25], rl: 2, zoom: 1.2, ar: 9, mv: 1, kick: 2.4, snd: [0.22, 2600, 180, 0.42, 110], model: [0.4, 0.4, 0.021, 0, 0, 0.16] }
 ];
@@ -1705,7 +1821,7 @@ function fire() {
   let marked = false; const dealt = new Map(); // what each target took from this shot, for the number shown: [damage, x, y, z, head]
   for (let i = 0; i < W.n; i++) {
     const sr = Math.sqrt(Math.random()) * spread / 2, sa = Math.random() * 6.2832, b = pitch + Math.sin(sa) * sr, a = yaw + Math.cos(sa) * sr / Math.max(0.2, Math.cos(pitch)), cp = Math.cos(b), d = v1.set(-Math.sin(a) * cp, Math.sin(b), -Math.cos(a) * cp);
-    let tHit = 80, hitE = null, head = false;
+    let tHit = W.range || 80, hitE = null, head = false; // how far a shot reaches: 80 m, the SR further
     if (d.y < -1e-4) tHit = Math.min(tHit, -P.ey / d.y);
     for (const bx of hard) { const tb = rayBox(P.x, P.ey, P.z, d.x, d.y, d.z, bx, tHit); if (tb >= 0) tHit = tb; }
     if (pvp) for (const r of liveRemotes) { if (r.mate) continue; const te = rayBody(r, P.x, P.ey, P.z, d.x, d.y, d.z, tHit); if (te >= 0 && te < tHit) { tHit = te; hitE = r; head = headHit; } } // a teammate is shot through
@@ -1726,7 +1842,7 @@ function fire() {
       if (pvp) net.dm[hitE.n] = Math.round(((net.dm[hitE.n] || 0) + amt) * 10) / 10; // the victim's page applies it
       else if (coop && !net.auth) { net.hq[hitE.id] = (net.hq[hitE.id] || 0) + amt; hitE.flash = 0.09; } // the page that flies the drones applies it
       else hurtDrone(hitE, amt, online ? R.you : 0);
-    } else if (tHit < 80) fx(hx, hy, hz, 0.7, COL.sodium, 0.09);
+    } else if (tHit < (W.range || 80)) fx(hx, hy, hz, 0.7, COL.sodium, 0.09);
   }
   for (const [t, [amt, x, y, z, head]] of dealt) dmgNum(t, amt, x, y, z, head);
   if (marked) { sfx.hit(); hudEl.hit.classList.remove('on'); void hudEl.hit.offsetWidth; hudEl.hit.classList.add('on'); }
@@ -2022,7 +2138,7 @@ function coopDown() { // down in co-op: wait for the others to finish the wave
 function vsRemoteShot(r) {
   r.lastShot = time;
   const cp = Math.cos(r.pitch), dx = -Math.sin(r.yaw) * cp, dy = Math.sin(r.pitch), dz = -Math.cos(r.yaw) * cp, oy = r.py + 1.5;
-  let t = 60; if (dy < -1e-4) t = Math.min(t, -oy / dy);
+  let t = 160; if (dy < -1e-4) t = Math.min(t, -oy / dy); // drawn as far as the longest reach (the SR's)
   for (const b of hard) { const tb = rayBox(r.x, oy, r.z, dx, dy, dz, b, t); if (tb >= 0) t = tb; }
   const mx = r.x + dx * 0.8, my = oy + dy * 0.8, mz = r.z + dz * 0.8, hx = r.x + dx * t, hy = oy + dy * t, hz = r.z + dz * t;
   const tr = tracers[tracerI = (tracerI + 1) % tracers.length];
