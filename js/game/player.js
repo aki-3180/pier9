@@ -14,7 +14,7 @@ const mags = WEAPONS.map(w => w.mag), cds = WEAPONS.map(() => 0); // each weapon
 function setWeapon(i, quiet) {
   i = (i + WEAPONS.length) % WEAPONS.length; if (i === wi && !quiet) return;
   mags[wi] = ammo; cds[wi] = time + fireCd; wi = i; W = WEAPONS[i]; ammo = mags[i]; fireCd = Math.max(0, cds[i] - time); reloadT = 0; ads = 0;
-  guns.forEach((g, k) => { g.visible = k === i; }); flash.position.z = guns[i].userData.fz; $('wName').textContent = W.name;
+  guns.forEach((g, k) => { g.visible = k === i; }); flash.position.z = guns[i].userData.fz; $('wName').textContent = W.name; paintHot();
   if (!quiet) { swapT = 0.3; tone('square', 320, 520, 0.05, 0.06); }
 }
 function refill() { WEAPONS.forEach((w, i) => { mags[i] = w.mag; cds[i] = 0; }); ammo = W.mag; reloadT = fireCd = swapT = 0; setAim(false); }
