@@ -143,7 +143,7 @@ function matchEnter(back, fresh) { // back: the seat saved before a reload, to c
   const stand = back && !back.dn && num(back.hp) > 0; // alive when the page went away: back to the same spot, with the same health and gun
   if (pvp && !stand) { net.pick = true; pickShow('武器を選ぶ', 'この一丁で戦う。倒されたら選び直せる'); }
   else if (pvp) { net.pick = false; pickI = clamp(num(back.w) | 0, 0, WEAPONS.length - 1); vsRespawn(); }
-  else { net.pick = false; wave = 0; score = 0; queue = []; breakT = 0; spawnT = 1; coopSpawn(); if (!back && !fresh) announce('協力', '仲間とドローンを迎え撃て'); else if (!stand) { net.dead = Infinity; pickShow('倒された', '仲間が今の波を制圧すると復帰する', true); } }
+  else { net.pick = false; wave = 0; score = 0; queue = []; breakT = 0; spawnT = 1; coopSpawn(); if (!back && !fresh) announce('協力', '仲間とドローンを迎え撃て'); else if (back && !stand) { net.dead = Infinity; /* down when the page went away: still down */ pickShow('倒された', '仲間が今の波を制圧すると復帰する', true); } }
   if (stand) {
     P.x = clamp(num(back.x), -LX, LX); P.z = clamp(num(back.z), -LZ, LZ); P.y = clamp(num(back.y), 0, 12); P.ey = P.y + EYEH; P.vy = 0; P.yaw = num(back.yaw); P.pitch = 0;
     P.hp = clamp(num(back.hp), 1, 100); if (coop) setWeapon(clamp(num(back.w) | 0, 0, WEAPONS.length - 1), true);
