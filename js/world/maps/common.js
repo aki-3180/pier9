@@ -7,6 +7,7 @@ const ENV = { // sky, fog and lights per time of day
   night: { sky: SKY_NIGHT, fog: [0x141a28, 18, 92], hemi: [0x7f95c4, 0x2a2018, 0.85], sun: [0x9db4e8, 0.35, -30, 50, 20] },
   day: { sky: SKY_DAY, fog: [0xc3d7e8, 30, 140], hemi: [0xe4efff, 0x8c8272, 1.1], sun: [0xfff0d0, 1.0, 35, 60, -25] },
   dusk: { sky: SKY_DUSK, fog: [0xb08a74, 80, 280], hemi: [0xe6dcd4, 0x3a3c4a, 0.85], sun: [0xffb878, 0.9, -60, 22, 10] }, // low sun over the sea, far sight for the SR
+  morning: { sky: SKY_MORNING, fog: [0xcfd6da, 80, 300], hemi: [0xe8eef6, 0x7a7262, 1.0], sun: [0xffe8c8, 0.95, 70, 30, 25] }, // clear and low from the east: as far to see as the dusk
   hall: { sky: SKY_DAY, fog: [0x6f6a62, 30, 120], hemi: [0xc9d2dc, 0x4a4238, 0.9], sun: [0xffdcaa, 0.75, -40, 40, -8] } // indoors by day: the sun low through the west windows
 };
 function setEnv(e) { sky.material.map = e.sky; scene.fog.color.setHex(e.fog[0]); scene.fog.near = e.fog[1]; scene.fog.far = e.fog[2]; hemi.color.setHex(e.hemi[0]); hemi.groundColor.setHex(e.hemi[1]); hemi.intensity = e.hemi[2]; moon.color.setHex(e.sun[0]); moon.intensity = e.sun[1]; moon.position.set(e.sun[2], e.sun[3], e.sun[4]); }
@@ -56,10 +57,14 @@ fenceTex.wrapS = fenceTex.wrapT = THREE.RepeatWrapping; fenceTex.repeat.set(5, 4
 const shojiTex = canvasTex(64, 64, g => { // paper behind a wooden lattice; the instance colour is the light inside
   g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#20150e'; for (let i = 0; i <= 64; i += 16) { g.fillRect(i - 1.5, 0, 3, 64); g.fillRect(0, i - 1.5, 64, 3); }
 });
+const grateTex = canvasTex(64, 64, g => { // steel grating: bars one way, thinner cross bars the other. Under half the texture is bar, so far off it thins away and what stands on it shows
+  g.fillStyle = '#fff'; for (let i = 0; i < 64; i += 8) g.fillRect(i, 0, 3, 64); for (let i = 0; i < 64; i += 16) g.fillRect(0, i, 64, 2);
+});
 const MATS = {
   conc: new THREE.MeshLambertMaterial({ map: concTex }), corr: new THREE.MeshLambertMaterial({ map: corr }), flat: new THREE.MeshLambertMaterial(),
   wood: new THREE.MeshLambertMaterial({ map: crateTex }), lit: new THREE.MeshBasicMaterial(), far: new THREE.MeshBasicMaterial({ fog: false }),
-  fence: new THREE.MeshLambertMaterial({ map: fenceTex, alphaTest: 0.4, side: THREE.DoubleSide }), shoji: new THREE.MeshBasicMaterial({ map: shojiTex })
+  fence: new THREE.MeshLambertMaterial({ map: fenceTex, alphaTest: 0.4, side: THREE.DoubleSide }), shoji: new THREE.MeshBasicMaterial({ map: shojiTex }),
+  grate: new THREE.MeshLambertMaterial({ map: grateTex, alphaTest: 0.5, side: THREE.DoubleSide })
 };
 function kit() {
   const g = new THREE.Group(), bx = [], L = {};

@@ -30,8 +30,9 @@ h1 span{color:var(--sodium)}
 #hotSeg button[aria-pressed="true"] small{color:var(--ink)}
 #hotReset{min-height:40px;padding:6px 10px}
 #mapRow,#lbMapRow{flex-wrap:wrap;row-gap:6px}
-@media (max-width:480px){ /* six names do not fit in one row on a narrow phone: three by two, under the label */
+@media (max-width:480px){ /* the names do not fit in one row on a narrow phone: three to a row, under the label; one left over takes the whole row */
   #mapSeg,#lbMap{display:grid;grid-template-columns:repeat(3,1fr);width:100%}
+  #mapSeg button:last-child:nth-child(3n+1),#lbMap button:last-child:nth-child(3n+1){grid-column:1/-1}
   #mapSeg button:nth-child(3n+1),#lbMap button:nth-child(3n+1){border-left:0}
   #mapSeg button:nth-child(n+4),#lbMap button:nth-child(n+4){border-top:1px solid var(--line)}
 }
