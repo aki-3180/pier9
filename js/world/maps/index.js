@@ -12,7 +12,9 @@ const MAPS = [
   { name: '上屋', tag: '九番上屋', day: true, env: 'hall', fly: 8.6, lead: '埠頭の古い上屋（荷さばきの倉庫）にも、暴走したドローンが高窓から入り込んだ。真ん中の足場に上がるか、車の陰で待つか。屋根の下では逃げ場がない。', build: buildHall,
     sides: [0, 1, 2, 3], start: [0, 24.5], cam: [8, 7.5, 0, 0, -0.4], spawns: [[-6, -24.5], [6, 24.5], [8, -24.5], [-8, 24.5], [-15.6, -12], [15.6, 12], [0, -25.5], [0, 25.5]] }, // fly: the drones come in at the high windows and stay under the roof
   { name: '突堤', tag: '九番突堤', env: 'dusk', lead: '夕暮れの長い突堤。岸壁は端から端まで見通せる。見張所の窓から撃ち抜くか、上屋の陰を抜けて詰めるか。', build: buildJetty,
-    sides: [0, 1, 2, 3], start: [-14, 55], cam: [18, 9, -6, 0, -0.25], spawns: [[-14, -55], [-14, 55], [12, -55], [12, 55], [-21, -52], [-21, 52], [-3, -58.2], [-3, 58.2]] }
+    sides: [0, 1, 2, 3], start: [-14, 55], cam: [18, 9, -6, 0, -0.25], spawns: [[-14, -55], [-14, 55], [12, -55], [12, 55], [-21, -52], [-21, 52], [-3, -58.2], [-3, 58.2]] },
+  { name: 'サイロ', tag: '九番サイロ', day: true, env: 'morning', lead: '朝の穀物ふ頭。広く、遠くまで見通せる。網目の高架通路から見下ろすか、サイロの脚のあいだを抜けるか。網の上に立てば、下からも丸見えだ。', build: buildSilo,
+    sides: [0, 1, 2, 3], start: [-4, 43], cam: [24, 12, -4, 4, -0.22], spawns: [[-17, -44], [-17, 44], [5, -45], [5, 45], [22, -44], [22, 44], [-6.5, -40.2], [-6.5, 40.2]] }
 ];
 function loadMap(i) {
   i = MAPS[i] ? i : 0; const m = MAPS[i];
@@ -20,4 +22,4 @@ function loadMap(i) {
   if (MAP) MAP.g.visible = false;
   MAP = m; mapI = i; m.g.visible = true; setEnv(ENV[m.env || (m.day ? 'day' : 'night')]); boxes = m.boxes; hard = m.hard; LX = m.lx; LZ = m.lz; best = store.get('best' + (i || ''), 0);
 }
-if (document.fonts && document.fonts.load) Promise.all(['Dela Gothic One', 'Zen Kaku Gothic New'].map(f => document.fonts.load(`700 32px "${f}"`, '第三倉庫管理棟火気厳禁九丸製氷漁協競り場居酒屋番処やきともつ焼横丁立ち飲み角打ん串かおでそばスナック汐灯ラーメン中華麻雀蓮囲碁将棋釣具えさな小路のべ波止通用心空室あ貸店舗たこ甘上事務所見張突堤'))).then(() => redraws.forEach(f => f()), () => {});
+if (document.fonts && document.fonts.load) Promise.all(['Dela Gothic One', 'Zen Kaku Gothic New'].map(f => document.fonts.load(`700 32px "${f}"`, '第三倉庫管理棟火気厳禁九丸製氷漁協競り場居酒屋番処やきともつ焼横丁立ち飲み角打ん串かおでそばスナック汐灯ラーメン中華麻雀蓮囲碁将棋釣具えさな小路のべ波止通用心空室あ貸店舗たこ甘上事務所見張突堤サイロ栄乗継計量荷受頭注意'))).then(() => redraws.forEach(f => f()), () => {});

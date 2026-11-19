@@ -20,6 +20,7 @@ const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const skyTex = stops => canvasTex(16, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); stops.forEach(([o, c]) => gr.addColorStop(o, c)); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
 const SKY_NIGHT = skyTex([[0, '#04070e'], [0.34, '#0b1220'], [0.46, '#1c2233'], [0.5, '#4a3324'], [0.52, '#141a28'], [1, '#141a28']]);
 const SKY_DUSK = skyTex([[0, '#1d2747'], [0.3, '#4a4a6e'], [0.44, '#c27a5e'], [0.5, '#f2a65a'], [0.52, '#5a4a48'], [1, '#5a4a48']]);
+const SKY_MORNING = skyTex([[0, '#4f7fbf'], [0.3, '#86ade0'], [0.44, '#dfe2e2'], [0.5, '#f4dfba'], [0.52, '#c7cdd0'], [1, '#c7cdd0']]);
 const SKY_DAY = skyTex([[0, '#3f7fcf'], [0.3, '#6fa6e0'], [0.46, '#cfe3f3'], [0.5, '#e6eef2'], [0.52, '#b9cfe0'], [1, '#b9cfe0']]);
 const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, map: SKY_NIGHT }));
 scene.add(sky);
