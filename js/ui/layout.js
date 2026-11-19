@@ -1,6 +1,6 @@
 // Laying out the touch buttons: drag to move, resize, flip, reset.
 'use strict';
-const BTN = { fire: fireBtn, reload: $('reloadBtn'), jump: jumpBtn, aim: aimBtn, swap: swapBtn, stick }, BNAME = { fire: '射撃', reload: '装填', jump: '跳ぶ', aim: '狙う', swap: '武器切替', stick: '移動スティック' };
+const BTN = { fire: fireBtn, reload: $('reloadBtn'), jump: jumpBtn, aim: aimBtn, bar: hotbar, stick }, BNAME = { fire: '射撃', reload: '装填', jump: '跳ぶ', aim: '狙う', bar: '武器の枠', stick: '移動スティック' };
 let lay = store.get('lay', {}), sz = store.get('sz', {}), sel = 'fire', editFrom = 'menu';
 if (!lay || typeof lay !== 'object') lay = {};
 if (!sz || typeof sz !== 'object') sz = {};

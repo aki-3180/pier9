@@ -40,21 +40,20 @@ const jumpBtn = $('jumpBtn');
 jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state !== 'play') return; jumpHeld = true; jumpQ = 0.25; jumpBtn.classList.add('down'); try { jumpBtn.setPointerCapture(e.pointerId); } catch (_) {} });
 const endJump = () => { jumpHeld = false; jumpBtn.classList.remove('down'); };
 jumpBtn.addEventListener('pointerup', endJump); jumpBtn.addEventListener('pointercancel', endJump);
-const aimBtn = $('aimBtn'), swapBtn = $('swapBtn');
+const aimBtn = $('aimBtn');
 function setAim(v) { aiming = v; aimBtn.classList.toggle('down', v); }
 aimBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play') setAim(!aiming); }); // tap to raise, tap again to lower
-swapBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play' && !pvp) setWeapon(wi + 1); });
 setWeapon(wi, true);
 // mouse + keyboard
 let locked = false;
 layer.addEventListener('mousedown', e => { if (state !== 'play' || touchMode && e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return; if (e.button === 2) setAim(true); else mouseFire = true;
   if (!locked && layer.requestPointerLock) { try { const p = layer.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (_) {} } });
 addEventListener('mouseup', e => { if (e.button === 2) setAim(false); else mouseFire = false; });
-addEventListener('wheel', e => { if (state === 'play' && !pvp && swapT <= 0 && e.deltaY) setWeapon(wi + (e.deltaY > 0 ? 1 : -1)); }, { passive: true });
+addEventListener('wheel', e => { if (state === 'play' && !pvp && swapT <= 0 && e.deltaY) cycleWeapon(e.deltaY > 0 ? 1 : -1); }, { passive: true });
 addEventListener('mousemove', e => { if (state === 'play' && (locked || mouseFire)) turn(e.movementX || 0, e.movementY || 0); });
 document.addEventListener('pointerlockchange', () => { const was = locked; locked = document.pointerLockElement === layer; if (was && !locked && state === 'play') pause(); });
 addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT') return; // typing a name or a message is not game input
-  keys[e.code] = true; if (state === 'play') { if (online && (e.code === 'Enter' || e.code === 'KeyT')) { e.preventDefault(); chatOpen(); return; } if (e.code === 'KeyR') startReload(); if (e.code === 'KeyQ' && !pvp) setWeapon(wi + 1); if (/^Digit[1-5]$/.test(e.code)) (pvp ? pickWeapon : setWeapon)(+e.code[5] - 1); if (e.code === 'Escape' || e.code === 'KeyP') pause(); if (e.code === 'Space') e.preventDefault(); } });
+  keys[e.code] = true; if (state === 'play') { if (online && (e.code === 'Enter' || e.code === 'KeyT')) { e.preventDefault(); chatOpen(); return; } if (e.code === 'KeyR') startReload(); if (e.code === 'KeyQ' && !pvp) cycleWeapon(1); if (/^Digit[1-5]$/.test(e.code)) { const n = +e.code[5] - 1; if (pvp) pickWeapon(n); else setWeapon(hot[n]); } if (e.code === 'Escape' || e.code === 'KeyP') pause(); if (e.code === 'Space') e.preventDefault(); } });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseFire = false; });
 for (const ev of ['contextmenu', 'gesturestart', 'dblclick']) document.addEventListener(ev, e => e.preventDefault());

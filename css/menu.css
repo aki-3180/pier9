@@ -19,6 +19,16 @@ h1 span{color:var(--sodium)}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--signal);color:var(--ink)}
 #mapSeg button{padding-left:8px;padding-right:8px}
+/* the weapon bar's order: tap one slot, then another, to swap them */
+#hotRow{flex-wrap:wrap;row-gap:6px}
+#hotRow>span:first-child{display:flex;flex-direction:column;gap:2px}
+#hotNote{font-size:11px;font-weight:500;color:var(--steel)}
+.hotCtl{display:flex;gap:8px;align-items:center}
+#hotSeg button{font-family:var(--f-data);padding:6px 8px;min-width:48px;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+#hotSeg small{font-size:10px;color:var(--steel)}
+#hotSeg button[aria-pressed="true"]{background:var(--sodium);color:var(--ink)}
+#hotSeg button[aria-pressed="true"] small{color:var(--ink)}
+#hotReset{min-height:40px;padding:6px 10px}
 #mapRow,#lbMapRow{flex-wrap:wrap;row-gap:6px}
 @media (max-width:480px){ /* six names do not fit in one row on a narrow phone: three by two, under the label */
   #mapSeg,#lbMap{display:grid;grid-template-columns:repeat(3,1fr);width:100%}

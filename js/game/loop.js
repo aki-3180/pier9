@@ -63,7 +63,7 @@ function frame(now) {
     const bs = pvp ? [] : enemies.filter(e => e.T.boss).slice(0, 2); hudEl.bossRow.hidden = !bs.length; // up to two bars
     bs.forEach((b, i) => { const f = i ? hudEl.bossFill2 : hudEl.bossFill, n = i ? hudEl.bossName2 : hudEl.bossName; f.style.width = Math.max(0, b.hp / b.max * 100) + '%'; if (n.textContent !== b.T.name) n.textContent = b.T.name; });
     hudEl.bossName2.hidden = hudEl.bossBar2.hidden = bs.length < 2;
-    hudEl.ammo.textContent = reloadT > 0 ? '装填中' : ammo; hudEl.ammo.classList.toggle('low', reloadT <= 0 && ammo <= W.mag / 4);
+    hudEl.ammo.textContent = reloadT > 0 ? '装填中' : ammo; hudEl.ammo.classList.toggle('low', reloadT <= 0 && ammo <= W.mag / 4); if (!pvp) paintHotAmmo();
     hudEl.hurt.style.opacity = Math.min(0.85, hurtA + (hp < 30 ? 0.25 : 0));
     if (online && vsBoard(vsBoardEl, innerHeight < 500 ? 4 : 8)) killLogEl.style.top = vitalsEl.offsetTop + vitalsEl.offsetHeight + 6 + 'px'; // the kill feed sits right under the standings
     hudEl.dmg.style.opacity = dirA; hudEl.dmg.style.transform = `rotate(${dirAng}rad)`;
