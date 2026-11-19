@@ -124,6 +124,8 @@ function buildSilo(m) {
     B('corr', -9.6, -9.6 + CL, 0, CH, -38, -38 + CW, HULLS[3]); crate(-2.75, -36.8);
 
     // ---- the base: a site office, a lamp, containers stacked two high behind (past the map's end)
+    // In front of the spawn points, a container each: from the gallery and the house slit (eyes 7.9 m up, 40 m off) they hide whoever stands 2-3 m behind them
+    B('corr', -20, -20 + CL, 0, CH, -39.06 - CW, -39.06, HULLS[1]); B('corr', 2, 2 + CL, 0, CH, -40.06 - CW, -40.06, HULLS[4]);
     B('corr', -8, -2, 0, 2.7, -48.6, -46.2, 0xd9d4c4); B('flat', -8.2, -1.8, 2.7, 2.9, -48.8, -46, ROOF); B('lit', -7, -5.4, 1.2, 2.0, -46.18, -46.16, 0x9fc0d8, 0); B('flat', -4.4, -3.4, 0, 2.1, -46.18, -46.16, 0x4b5560, 0);
     for (let x = QX + 0.2, i = 0; x < HX + 6; x += CL + 0.08, i++) { B('corr', x, x + CL, 0, CH, -HZ - 0.06 - CW, -HZ - 0.06, HULLS[i % 5]); B('corr', x, x + CL, CH, CH * 2, -HZ - 0.06 - CW, -HZ - 0.06, HULLS[(i + 2) % 5]); }
     B('flat', 13.9, 14.2, 0, 9, -46.15, -45.85, DARK); B('flat', 13.9, 15.4, 8.85, 9, -46.1, -45.9, DARK, 0); light(15.3, 8.7, -46, 0xfff1d8, 0.5, 30, 4);
