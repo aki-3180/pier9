@@ -84,17 +84,17 @@ body.online #netInfo{display:flex}
 #aimBtn{right:calc(var(--sar) + 100px);bottom:calc(172px + var(--sab));width:calc(60px*var(--bs));height:calc(60px*var(--bs));
   background:var(--panel);border:1px solid var(--sodium);font-size:12px}
 #aimBtn.down{background:rgba(255,179,71,.4)}
-/* the weapon bar: five slots along the bottom edge, the one in hand lit, a thin bar for what is left in each magazine */
-#hotbar{left:50%;bottom:calc(10px + var(--sab));transform:translateX(-50%);display:flex;gap:calc(4px*var(--bs));padding:calc(4px*var(--bs));
-  background:rgba(5,8,15,.5);border:1px solid var(--line);border-radius:6px;pointer-events:auto;touch-action:none}
-#hotbar button{position:relative;width:calc(54px*var(--bs));height:calc(46px*var(--bs));padding:0;display:grid;place-items:center;touch-action:none;cursor:pointer;
+/* the weapon slots: five buttons, by default in a row along the bottom edge (--o: the place in that row), the one in hand lit,
+   a thin bar for what is left in each magazine. Once placed in the layout editor each stands wherever it was put */
+.hot{left:calc(50% + var(--o)*60px);bottom:calc(10px + var(--sab));transform:translateX(-50%);pointer-events:auto;touch-action:none;cursor:pointer;
+  width:calc(54px*var(--bs));height:calc(46px*var(--bs));padding:0;display:grid;place-items:center;
   background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--steel);font-family:var(--f-data);font-weight:700;font-size:calc(14px*var(--bs))}
-#hotbar small{position:absolute;left:4px;top:2px;font-size:calc(10px*var(--bs));line-height:1;color:var(--steel)}
-#hotbar i{position:absolute;left:5px;right:5px;bottom:4px;height:3px;background:rgba(238,242,234,.14);overflow:hidden}
-#hotbar u{display:block;height:100%;width:calc(var(--a,1)*100%);background:var(--hull)}
-#hotbar .low u{background:var(--alarm)}
-#hotbar .on{border:2px solid var(--sodium);background:rgba(255,179,71,.28);color:var(--signal)}
-#hotbar .on small{color:var(--sodium)}
+.hot small{position:absolute;left:4px;top:2px;font-size:calc(10px*var(--bs));line-height:1;color:var(--steel)}
+.hot i{position:absolute;left:5px;right:5px;bottom:4px;height:3px;background:rgba(238,242,234,.14);overflow:hidden}
+.hot u{display:block;height:100%;width:calc(var(--a,1)*100%);background:var(--hull)}
+.hot.low u{background:var(--alarm)}
+.hot.on{border:2px solid var(--sodium);background:rgba(255,179,71,.28);color:var(--signal)}
+.hot.on small{color:var(--sodium)}
 #scope{inset:0;opacity:0;background:radial-gradient(circle at center,transparent 0,transparent calc(min(42vh,42vw) - 2px),#000 min(42vh,42vw))}
 #scope::before,#scope::after{content:"";position:absolute;background:rgba(5,8,15,.9)}
 #scope::before{left:50%;top:0;bottom:0;width:1px}
@@ -112,8 +112,7 @@ body:not(.touch) #stick,body:not(.touch) #reloadBtn,body:not(.touch) #fireBtn,bo
 body.editing #editBar{display:flex}
 body.editing #vitals,body.editing #topRight,body.editing #cross,body.editing #announce,body.editing #ammoBox{visibility:hidden}
 body.editing #fireBtn,body.editing #reloadBtn,body.editing #jumpBtn,body.editing #aimBtn{display:grid;outline:2px dashed var(--signal);outline-offset:4px;cursor:grab;z-index:2}
-body.editing #hotbar{display:flex;outline:2px dashed var(--signal);outline-offset:4px;cursor:grab;z-index:2}
-body.editing #hotbar button{pointer-events:none}
+body.editing .hot{display:grid;outline:2px dashed var(--signal);outline-offset:4px;cursor:grab;z-index:2}
 body.editing #stick{display:block;pointer-events:auto;opacity:.8;outline:2px dashed var(--signal);outline-offset:4px;cursor:grab;z-index:2}
 body.editing #hud .sel{outline:3px solid var(--sodium)}
 #sizeRow{display:flex;align-items:center;gap:10px;flex-basis:100%;justify-content:center}
@@ -191,7 +190,7 @@ body.online #vsBoard{display:table}
 #vsTable td.rk{padding-right:0}
 #vsTable td.k{font-size:19px}
 body.vs #waveRow,body.vs #bossRow,body.vs #scoreBox{display:none}
-body.vs:not(.editing) #hotbar{display:none}
+body.vs:not(.editing) .hot{display:none}
 /* damage numbers: one per target, rising off the point that was hit */
 .dnum{left:0;top:0;font-family:var(--f-data);font-weight:700;font-size:20px;line-height:1;color:#fff;white-space:nowrap;pointer-events:none;will-change:transform,opacity;
   text-shadow:0 1px 0 var(--ink),0 0 4px var(--ink),0 0 1px var(--ink)}

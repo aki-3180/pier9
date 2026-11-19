@@ -1,17 +1,12 @@
-// The weapon bar along the bottom (solo and co-op): five slots, one tap each. Which weapon sits in which slot is set on the title screen.
+// The five weapon slots (solo and co-op): one button each, one tap to take that weapon. Each is placed and sized on its own in the layout editor. Which weapon sits in which slot is set on the title screen.
 'use strict';
 // hot[s] = the weapon (index into WEAPONS) in slot s. Kept only if it is still one of each weapon.
 let hot = store.get('hot', null);
 if (!Array.isArray(hot) || hot.length !== WEAPONS.length || WEAPONS.some((_, i) => !hot.includes(i))) hot = WEAPONS.map((_, i) => i);
-const hotbar = $('hotbar'), hotSlots = [], hotAmmo = [];
-for (let s = 0; s < WEAPONS.length; s++) {
-  const b = document.createElement('button'); b.type = 'button';
-  b.innerHTML = '<small></small><b></b><i><u></u></i>'; b.querySelector('small').textContent = s + 1;
-  b.addEventListener('pointerdown', e => { if (state !== 'play' || pvp) return; e.preventDefault(); setWeapon(hot[s]); }); // in the layout editor the tap falls through to the bar, which drags it
-  hotbar.append(b); hotSlots.push(b); hotAmmo.push(-1);
-}
+const hotSlots = WEAPONS.map((_, s) => $('hot' + s)), hotAmmo = hotSlots.map(() => -1);
+hotSlots.forEach((b, s) => b.addEventListener('pointerdown', e => { if (state !== 'play' || pvp) return; e.preventDefault(); setWeapon(hot[s]); })); // in the layout editor layout.js drags it instead
 function paintHot() {
-  hotSlots.forEach((b, s) => { const w = WEAPONS[hot[s]]; b.querySelector('b').textContent = w.name; b.setAttribute('aria-label', `${s + 1}番 ${w.name}`); b.classList.toggle('on', hot[s] === wi); hotAmmo[s] = -1; });
+  hotSlots.forEach((b, s) => { const w = WEAPONS[hot[s]]; b.querySelector('b').textContent = w.name; b.setAttribute('aria-label', `${s + 1}番の枠 ${w.name}`); b.classList.toggle('on', hot[s] === wi); hotAmmo[s] = -1; });
 }
 function paintHotAmmo() { // a thin bar under each name: what is left in that weapon's magazine
   hotSlots.forEach((b, s) => { const w = hot[s], a = w === wi ? (reloadT > 0 ? 0 : ammo) : mags[w], f = Math.round(a / WEAPONS[w].mag * 100);

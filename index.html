@@ -42,7 +42,11 @@
   <button id="reloadBtn" aria-label="リロード">装填</button>
   <button id="jumpBtn" aria-label="ジャンプ">跳ぶ</button>
   <button id="aimBtn" aria-label="狙う">狙う</button>
-  <div id="hotbar" role="toolbar" aria-label="武器"></div>
+  <button class="hot" id="hot0" style="--o:-2"><small>1</small><b></b><i><u></u></i></button>
+  <button class="hot" id="hot1" style="--o:-1"><small>2</small><b></b><i><u></u></i></button>
+  <button class="hot" id="hot2" style="--o:0"><small>3</small><b></b><i><u></u></i></button>
+  <button class="hot" id="hot3" style="--o:1"><small>4</small><b></b><i><u></u></i></button>
+  <button class="hot" id="hot4" style="--o:2"><small>5</small><b></b><i><u></u></i></button>
   <div id="editBar">
     <p>ドラッグで移動。触れたものの大きさを変更</p>
     <div id="sizeRow"><label id="sizeLbl" for="sizeRange">射撃の大きさ</label><input type="range" id="sizeRange" min="0.6" max="2" step="0.05" value="1"></div>
@@ -109,7 +113,7 @@
         <li><b>視点</b>それ以外の場所をドラッグ</li>
         <li><b>射撃</b>ボタン長押し。押したまま狙いも動かせる（設定の「射撃中の視点操作」で切れる）</li>
         <li><b>狙う</b>狙うボタンで構える。拡大して弾のばらつきが減る。SR はスコープ、ほかはドットサイトを覗く</li>
-        <li><b>武器</b>画面下の5つの枠を押すとその武器に持ち替え。枠の並びは設定の「武器の並び」で入れ替えられる。対戦では出撃のたびに一丁だけ選ぶ</li>
+        <li><b>武器</b>武器枠1〜5のボタンを押すとその武器に持ち替え。枠は1つずつボタン配置で動かせる。枠の並びは設定の「武器の並び」で入れ替えられる。対戦では出撃のたびに一丁だけ選ぶ</li>
         <li><b>跳ぶ</b>木箱を足場にすればコンテナの上へ登れる。倉庫街と魚市場の階段は歩くだけで上がれる</li>
         <li><b>マップ</b>コンテナ場・倉庫街・魚市場・横丁・上屋・突堤の6つ。横丁は見通しが短く、SG 向き。上屋は屋根の下の撃ち合い。突堤は見通しが長く、SR 向き。ルームではホストが選ぶ</li>
         <li><b>ルーム</b>名前を入れて「ルームを作る」か、4桁の番号で「ルームに参加」。モードは 1v1v…・2v2v…・3v3・4v4・協力。対戦は狙いの補正とオート射撃が無し、頭は1.4倍、倒すと体力 +50、3秒で復帰。会話ボタン（パソコンは Enter か T）でチャット</li>
