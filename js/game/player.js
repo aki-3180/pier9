@@ -1,7 +1,7 @@
 // The player and the weapon in hand; the flags for which mode is being played.
 'use strict';
 const EYEH = 1.65, GRAV = 22, JUMP = 8.2;
-const P = { x: 0, z: 4, y: 0, vy: 0, ey: EYEH, ground: true, yaw: 0, pitch: 0, hp: 100 };
+const P = { x: 0, z: 4, y: 0, vy: 0, vx: 0, vz: 0, onIce: false, ey: EYEH, ground: true, yaw: 0, pitch: 0, hp: 100 }; // vx, vz: only kept while sliding on ice (MAP.ice)
 function floorAt(x, z, feet) { // highest surface under the player that is no more than a step above the feet
   let f = 0;
   for (const b of boxes) if (b.h > f && b.h <= feet + 0.35 && Math.abs(x - b.x) <= b.hx + 0.25 && Math.abs(z - b.z) <= b.hz + 0.25) f = b.h;

@@ -8,6 +8,7 @@ const ENV = { // sky, fog and lights per time of day
   day: { sky: SKY_DAY, fog: [0xc3d7e8, 30, 140], hemi: [0xe4efff, 0x8c8272, 1.1], sun: [0xfff0d0, 1.0, 35, 60, -25] },
   dusk: { sky: SKY_DUSK, fog: [0xb08a74, 80, 280], hemi: [0xe6dcd4, 0x3a3c4a, 0.85], sun: [0xffb878, 0.9, -60, 22, 10] }, // low sun over the sea, far sight for the SR
   morning: { sky: SKY_MORNING, fog: [0xcfd6da, 80, 300], hemi: [0xe8eef6, 0x7a7262, 1.0], sun: [0xffe8c8, 0.95, 70, 30, 25] }, // clear and low from the east: as far to see as the dusk
+  snow: { sky: SKY_SNOW, fog: [0x2c3448, 40, 175], hemi: [0xa9bde6, 0x8a90a8, 1.05], sun: [0xc6d6ff, 0.45, -30, 50, 25] }, // a snowy night: the snow throws the light back up
   hall: { sky: SKY_DAY, fog: [0x6f6a62, 30, 120], hemi: [0xc9d2dc, 0x4a4238, 0.9], sun: [0xffdcaa, 0.75, -40, 40, -8] } // indoors by day: the sun low through the west windows
 };
 function setEnv(e) { sky.material.map = e.sky; scene.fog.color.setHex(e.fog[0]); scene.fog.near = e.fog[1]; scene.fog.far = e.fog[2]; hemi.color.setHex(e.hemi[0]); hemi.groundColor.setHex(e.hemi[1]); hemi.intensity = e.hemi[2]; moon.color.setHex(e.sun[0]); moon.intensity = e.sun[1]; moon.position.set(e.sun[2], e.sun[3], e.sun[4]); }

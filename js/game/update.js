@@ -88,10 +88,16 @@ function playerStep(dt) {
   let mx = joy.x, my = joy.y; if (Math.hypot(mx, my) < 0.12) mx = my = 0;
   if (keys.KeyW || keys.ArrowUp) my -= 1; if (keys.KeyS || keys.ArrowDown) my += 1; if (keys.KeyA || keys.ArrowLeft) mx -= 1; if (keys.KeyD || keys.ArrowRight) mx += 1;
   const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
-  const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw), sp = 5.4 * W.mv * (1 - 0.3 * ads);
-  P.x += (mx * cy + my * sy) * sp * dt; P.z += (-mx * sy + my * cy) * sp * dt;
+  const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw), sp = 5.4 * W.mv * (1 - 0.3 * ads), tx = (mx * cy + my * sy) * sp, tz = (-mx * sy + my * cy) * sp;
+  // on ice (a map's MAP.ice, at ground level) the feet do not grip: the speed eases toward where the stick points, a little faster than on land,
+  // so a slide is quick to start, slow to turn and slow to stop. A jump keeps the slide it left with. Anywhere else the step is as it always was
+  if (P.ground) P.onIce = !!(MAP.ice && P.y < 0.05 && MAP.ice(P.x, P.z));
+  const x0 = P.x, z0 = P.z;
+  if (P.onIce) { const k = 1 - Math.exp(-dt * 1.5); P.vx += (tx * 1.15 - P.vx) * k; P.vz += (tz * 1.15 - P.vz) * k; } else { P.vx = tx; P.vz = tz; }
+  P.x += P.vx * dt; P.z += P.vz * dt;
   pushOut(P, 0.5, P.y + 0.3, P.y + 1.8);
   P.x = clamp(P.x, -LX, LX); P.z = clamp(P.z, -LZ, LZ);
+  if (P.onIce && dt > 0) { P.vx = (P.x - x0) / dt; P.vz = (P.z - z0) / dt; } // a wall (or the map's edge) takes up the part of the slide that runs into it
   // jumping and standing on things
   jumpQ -= dt;
   if ((jumpHeld || jumpQ > 0 || keys.Space) && P.ground) { P.vy = JUMP; P.ground = false; jumpQ = 0; tone('sine', 220, 330, 0.08, 0.05); }

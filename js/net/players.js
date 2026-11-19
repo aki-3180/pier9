@@ -40,11 +40,11 @@ function vsRespawn() { // in a two-team mode each team has its own half of the s
   const S = MAP.spawns, M = MODES[R.mode], t = teamOf(mySlot()), pool = M.teams === 2 && M.size > 1 ? S.filter((_, i) => i % 2 === t % 2) : S;
   const foes = liveRemotes.filter(r => !r.mate); let best = pool[Math.random() * pool.length | 0], bestD = -1;
   if (foes.length) for (const s of pool) { let m = 1e9; for (const r of foes) m = Math.min(m, Math.hypot(r.x - s[0], r.z - s[1])); if (m > bestD) { bestD = m; best = s; } }
-  net.taken = {}; P.x = best[0]; P.z = best[1]; P.yaw = Math.atan2(P.x, P.z); P.y = 0; P.vy = 0; P.ey = EYEH; P.pitch = 0; P.hp = 100; setWeapon(pickI, true); refill(); net.dead = 0; hurtA = 0; pickEl.hidden = true;
+  net.taken = {}; P.x = best[0]; P.z = best[1]; P.yaw = Math.atan2(P.x, P.z); P.y = 0; P.vy = P.vx = P.vz = 0; P.onIce = false; P.ey = EYEH; P.pitch = 0; P.hp = 100; setWeapon(pickI, true); refill(); net.dead = 0; hurtA = 0; pickEl.hidden = true;
 }
 function coopSpawn() { // side by side at the map's start, a step apart by slot
   const s = Math.max(0, mySlot()), [sx, sz] = MAP.start;
-  P.x = sx + ((s % 4) - 1.5) * 1.3; P.z = sz + (s >= 4 ? 1.5 : 0); P.y = 0; P.vy = 0; P.ey = EYEH; P.yaw = 0; P.pitch = 0; P.hp = 100;
+  P.x = sx + ((s % 4) - 1.5) * 1.3; P.z = sz + (s >= 4 ? 1.5 : 0); P.y = 0; P.vy = P.vx = P.vz = 0; P.onIce = false; P.ey = EYEH; P.yaw = 0; P.pitch = 0; P.hp = 100;
   pushOut(P, 0.5, 0.3, 1.8); P.x = clamp(P.x, -LX, LX); P.z = clamp(P.z, -LZ, LZ); refill(); net.dead = 0; hurtA = 0; pickEl.hidden = true;
 }
 function coopDown() { // down in co-op: wait for the others to finish the wave

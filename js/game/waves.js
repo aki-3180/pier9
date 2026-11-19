@@ -29,6 +29,6 @@ function clearField() {
 }
 function resetGame() {
   clearField();
-  P.x = MAP.start[0]; P.z = MAP.start[1]; P.y = 0; P.vy = 0; P.ey = EYEH; P.yaw = 0; P.pitch = 0; P.hp = 100; score = 0; refill(); breakT = 0; hurtA = 0; dirA = 0;
+  P.x = MAP.start[0]; P.z = MAP.start[1]; P.y = 0; P.vy = P.vx = P.vz = 0; P.onIce = false; P.ey = EYEH; P.yaw = 0; P.pitch = 0; P.hp = 100; score = 0; refill(); breakT = 0; hurtA = 0; dirA = 0;
   startWave(Math.max(1, Math.min(99, +new URLSearchParams(location.search).get('wave') | 0))); // ?wave=20 starts there, for trying a later wave
 }
