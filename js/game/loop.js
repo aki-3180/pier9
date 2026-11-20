@@ -18,6 +18,7 @@ function frame(now) {
   for (const t of tracers) if (t.life > 0) { t.life -= dt; if (t.life <= 0) t.m.visible = false; }
   for (const f of fxPool) if (f.life > 0) { f.life -= dt; const q = Math.max(0, f.life / f.max); f.s.material.opacity = q; f.s.scale.setScalar(f.size * (1.3 - q * 0.6)); if (f.life <= 0) f.s.visible = false; }
   beacons.forEach((b, i) => { b.material.opacity = (now / 1000 + i * 0.6) % 1.6 < 0.5 ? 1 : 0.12; });
+  if (MAP && MAP.tick) MAP.tick(dt, now / 1000); // a map's own moving parts (falling snow, a carousel): drawn only, nothing to collide with
   hurtA = Math.max(0, hurtA - dt * 1.4); dirA = Math.max(0, dirA - dt * 1.1);
   for (let i = booms.length - 1; i >= 0; i--) { const b = booms[i]; if ((b.t -= dt) > 0) continue; fx(b.x, b.y, b.z, b.s, i % 2 ? COL.sodium : '#ffd9a0', 0.32); booms.splice(i, 1); } // a boss's chain of explosions
   shakeT = Math.max(0, shakeT - dt); const sk = shakeT * shakeT * 0.5;

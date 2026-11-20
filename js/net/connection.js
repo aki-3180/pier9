@@ -145,7 +145,7 @@ function matchEnter(back, fresh) { // back: the seat saved before a reload, to c
   else if (pvp) { net.pick = false; pickI = clamp(num(back.w) | 0, 0, WEAPONS.length - 1); vsRespawn(); }
   else { net.pick = false; wave = 0; score = 0; queue = []; breakT = 0; spawnT = 1; coopSpawn(); if (!back && !fresh) announce('協力', '仲間とドローンを迎え撃て'); else if (back && !stand) { net.dead = Infinity; /* down when the page went away: still down */ pickShow('倒された', '仲間が今の波を制圧すると復帰する', true); } }
   if (stand) {
-    P.x = clamp(num(back.x), -LX, LX); P.z = clamp(num(back.z), -LZ, LZ); P.y = clamp(num(back.y), 0, 12); P.ey = P.y + EYEH; P.vy = 0; P.yaw = num(back.yaw); P.pitch = 0;
+    P.x = clamp(num(back.x), -LX, LX); P.z = clamp(num(back.z), -LZ, LZ); P.y = clamp(num(back.y), 0, 12); P.ey = P.y + EYEH; P.vy = P.vx = P.vz = 0; P.onIce = false; P.yaw = num(back.yaw); P.pitch = 0;
     P.hp = clamp(num(back.hp), 1, 100); if (coop) setWeapon(clamp(num(back.w) | 0, 0, WEAPONS.length - 1), true);
   }
   if (fresh) countdown(3);
