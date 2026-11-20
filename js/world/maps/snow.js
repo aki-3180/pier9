@@ -41,17 +41,8 @@ function buildSnow(m) {
   for (let i = 0; i < NF; i++) { fp[i * 3] = (rnd() - 0.5) * 60; fp[i * 3 + 1] = rnd() * 22; fp[i * 3 + 2] = (rnd() - 0.5) * 60; }
   fall.geometry.setAttribute('position', new THREE.BufferAttribute(fp, 3)); fall.frustumCulled = false; g.add(fall);
   const spin = []; // things that turn: [object, axis, speed]
-  // Most of what is drawn here is small and many: drawn one by one it would cost hundreds of draw calls. So the pieces are gathered
-  // ([geometry, colour, placement]) and merged at the end into one mesh per material, coloured per vertex: lam(c) = lit by the lights, bas(c) = glowing
-  const lam = c => ({ merge: 'lam', c }), bas = c => ({ merge: 'bas', c }), lists = { lam: [], bas: [] };
-  const part = (geo, mat, x, y, z, list) => { const o = new THREE.Object3D(); o.position.set(x, y, z); o.rotation.order = 'YXZ'; (list || lists)[mat.merge].push([geo, mat.c, o]); return o; };
-  const merge = (list, mat, parent) => {
-    if (!list.length) return; const gs = list.map(([geo, c, o]) => { o.updateMatrix(); return [(geo.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(o.matrix), c]; });
-    const n = gs.reduce((a, [q]) => a + q.attributes.position.count, 0), pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), cc = new THREE.Color(); let k = 0;
-    for (const [q, c] of gs) { const m = q.attributes.position.count; pos.set(q.attributes.position.array, k * 3); nor.set(q.attributes.normal.array, k * 3); cc.set(c); for (let i = k; i < k + m; i++) { col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b; } k += m; q.dispose(); }
-    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); bg.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    const me = new THREE.Mesh(bg, mat); me.frustumCulled = false; (parent || g).add(me);
-  };
+  const { lam, bas, part, merge, done } = parts(g); // the many small drawn pieces, merged (common.js)
+
 
   // ---- in the middle: the island and the great tree. Under the lowest boughs there is room for shots, not for a body
   K.col(-7.5, 7.5, 0, 0.3, -3.1, 3.1); K.col(-3.1, 3.1, 0, 0.3, -7.5, 7.5); K.col(-5.3, 5.3, 0, 0.3, -5.3, 5.3);
@@ -201,7 +192,7 @@ function buildSnow(m) {
     merge(on.bas, new THREE.MeshBasicMaterial({ vertexColors: true }), wheel);
     for (const x of [-6, 6]) part(new THREE.BoxGeometry(0.8, 28, 0.8), bas(WM), 48 + x * 0.5, 13, -72).rotation.z = x > 0 ? 0.22 : -0.22;
     mk(new THREE.CylinderGeometry(1.2, 1.8, 14, 12), new THREE.MeshLambertMaterial({ color: 0xe8e4dc }), -120, 7, 10, g); const lh = glow(0xfff0c0, 9); lh.position.set(-120, 14.5, 10); g.add(lh); beacons.push(lh); }
-  merge(lists.lam, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); merge(lists.bas, new THREE.MeshBasicMaterial({ vertexColors: true })); // (both sides: the snow huts are seen from inside, the gables from behind)
+  done();
   K.done();
   m.g = g; m.boxes = K.bx; m.hard = K.bx.filter(b => !b.soft); m.lx = HX - 0.5; m.lz = HZ - 0.5; m.dx = HX - 1; m.dz = HZ - 1;
   m.ice = (x, z) => Math.abs(z) < IZ; // the frozen harbour: underfoot at ground level (the island and the boardwalks stand 0.3 m up)

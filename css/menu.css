@@ -30,14 +30,13 @@ h1 span{color:var(--sodium)}
 #hotSeg button[aria-pressed="true"] small{color:var(--ink)}
 #hotReset{min-height:40px;padding:6px 10px}
 #mapRow,#lbMapRow{flex-wrap:wrap;row-gap:6px}
-@media (max-width:480px){ /* the names do not fit in one row on a narrow phone: three to a row, under the label; one or two left over share the last row */
-  #mapSeg,#lbMap{display:grid;grid-template-columns:repeat(6,1fr);width:100%}
-  #mapSeg button,#lbMap button{grid-column:span 2}
-  #mapSeg button:last-child:nth-child(3n+1),#lbMap button:last-child:nth-child(3n+1){grid-column:1/-1}
-  #mapSeg button:nth-last-child(2):nth-child(3n+1),#mapSeg button:last-child:nth-child(3n+2),#lbMap button:nth-last-child(2):nth-child(3n+1),#lbMap button:last-child:nth-child(3n+2){grid-column:span 3}
-  #mapSeg button:nth-child(3n+1),#lbMap button:nth-child(3n+1){border-left:0}
-  #mapSeg button:nth-child(n+4),#lbMap button:nth-child(n+4){border-top:1px solid var(--line)}
-}
+/* the map names no longer fit in one row: three to a row, under the label, at every width; one or two left over share the last row */
+#mapSeg,#lbMap{display:grid;grid-template-columns:repeat(6,1fr);width:100%}
+#mapSeg button,#lbMap button{grid-column:span 2}
+#mapSeg button:last-child:nth-child(3n+1),#lbMap button:last-child:nth-child(3n+1){grid-column:1/-1}
+#mapSeg button:nth-last-child(2):nth-child(3n+1),#mapSeg button:last-child:nth-child(3n+2),#lbMap button:nth-last-child(2):nth-child(3n+1),#lbMap button:last-child:nth-child(3n+2){grid-column:span 3}
+#mapSeg button:nth-child(3n+1),#lbMap button:nth-child(3n+1){border-left:0}
+#mapSeg button:nth-child(n+4),#lbMap button:nth-child(n+4){border-top:1px solid var(--line)}
 #go{font-family:var(--f-display);font-size:22px;letter-spacing:.12em;padding:16px 20px;border:0;border-radius:4px;
   background:var(--sodium);color:var(--ink);cursor:pointer;min-height:60px}
 #go:active{transform:translateY(1px)}

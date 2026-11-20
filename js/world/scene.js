@@ -22,6 +22,7 @@ const SKY_NIGHT = skyTex([[0, '#04070e'], [0.34, '#0b1220'], [0.46, '#1c2233'], 
 const SKY_DUSK = skyTex([[0, '#1d2747'], [0.3, '#4a4a6e'], [0.44, '#c27a5e'], [0.5, '#f2a65a'], [0.52, '#5a4a48'], [1, '#5a4a48']]);
 const SKY_MORNING = skyTex([[0, '#4f7fbf'], [0.3, '#86ade0'], [0.44, '#dfe2e2'], [0.5, '#f4dfba'], [0.52, '#c7cdd0'], [1, '#c7cdd0']]);
 const SKY_SNOW = skyTex([[0, '#070b18'], [0.3, '#121a30'], [0.45, '#2b3550'], [0.5, '#4a4f66'], [0.52, '#2c3448'], [1, '#2c3448']]);
+const SKY_WINTER = skyTex([[0, '#2f6fc4'], [0.3, '#7fb0e4'], [0.45, '#d8e8f4'], [0.5, '#f2f6f8'], [0.52, '#d9e0e8'], [1, '#d9e0e8']]);
 const SKY_DAY = skyTex([[0, '#3f7fcf'], [0.3, '#6fa6e0'], [0.46, '#cfe3f3'], [0.5, '#e6eef2'], [0.52, '#b9cfe0'], [1, '#b9cfe0']]);
 const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, map: SKY_NIGHT }));
 scene.add(sky);
