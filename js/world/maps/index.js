@@ -16,7 +16,9 @@ const MAPS = [
   { name: 'サイロ', tag: '九番サイロ', day: true, env: 'morning', lead: '朝の穀物ふ頭。広く、遠くまで見通せる。網目の高架通路から見下ろすか、サイロの脚のあいだを抜けるか。網の上に立てば、下からも丸見えだ。', build: buildSilo,
     sides: [0, 1, 2, 3], start: [-4, 43], cam: [24, 12, -4, 4, -0.22], spawns: [[-17, -44], [-17, 44], [5, -45], [5, 45], [22, -44], [22, 44], [-6.5, -40.2], [-6.5, 40.2]] },
   { name: '聖夜', tag: '九番埠頭 聖夜市', env: 'snow', lead: 'クリスマスの夜、凍った港の両岸に市が立った。氷の上は足が止まらない。島のツリーを回り込むか、屋台の屋根を伝うか、かまくらの入口で待つか。', build: buildSnow,
-    sides: [0, 1, 2, 3], start: [-12, 40], cam: [26, 13, 0, 0, -0.3], spawns: [[-34.5, -40.5], [34.5, 40.5], [-12, -40], [12, 40], [12, -40], [-12, 40], [26, -40], [-26, 40]] }
+    sides: [0, 1, 2, 3], start: [-12, 40], cam: [26, 13, 0, 0, -0.3], spawns: [[-34.5, -40.5], [34.5, 40.5], [-12, -40], [12, 40], [12, -40], [-12, 40], [26, -40], [-26, 40]] },
+  { name: 'スケート場', tag: '九番埠頭 スケート場', day: true, env: 'winter', lead: '晴れた冬の昼、港の脇のスケート場。両端と真ん中に三階建ての家。窓から撃ち下ろすか、リンクの氷を滑って詰めるか。真ん中の家を取った側が有利だ。', build: buildRink,
+    sides: [0, 1, 2, 3], start: [54, 9], cam: [34, 14, 0, 0, -0.26], spawns: [[-60.5, -3.5], [60.5, 3.5], [-60.5, 3.5], [60.5, -3.5], [-55, -9.5], [55, 9.5], [-55, 9.5], [55, -9.5]] }
 ];
 function loadMap(i) {
   i = MAPS[i] ? i : 0; const m = MAPS[i];
@@ -24,4 +26,4 @@ function loadMap(i) {
   if (MAP) MAP.g.visible = false;
   MAP = m; mapI = i; m.g.visible = true; setEnv(ENV[m.env || (m.day ? 'day' : 'night')]); boxes = m.boxes; hard = m.hard; LX = m.lx; LZ = m.lz; best = store.get('best' + (i || ''), 0);
 }
-if (document.fonts && document.fonts.load) Promise.all(['Dela Gothic One', 'Zen Kaku Gothic New'].map(f => document.fonts.load(`700 32px "${f}"`, '第三倉庫管理棟火気厳禁九丸製氷漁協競り場居酒屋番処やきともつ焼横丁立ち飲み角打ん串かおでそばスナック汐灯ラーメン中華麻雀蓮囲碁将棋釣具えさな小路のべ波止通用心空室あ貸店舗たこ甘上事務所見張突堤サイロ栄乗継計量荷受頭注意聖夜クリスマス市ホットワインおでんたい焼き甘酒ケーキオーナメントやきいも'))).then(() => redraws.forEach(f => f()), () => {});
+if (document.fonts && document.fonts.load) Promise.all(['Dela Gothic One', 'Zen Kaku Gothic New'].map(f => document.fonts.load(`700 32px "${f}"`, '第三倉庫管理棟火気厳禁九丸製氷漁協競り場居酒屋番処やきともつ焼横丁立ち飲み角打ん串かおでそばスナック汐灯ラーメン中華麻雀蓮囲碁将棋釣具えさな小路のべ波止通用心空室あ貸店舗たこ甘上事務所見張突堤サイロ栄乗継計量荷受頭注意聖夜クリスマス市ホットワインおでんたい焼き甘酒ケーキオーナメントやきいもロッジセンターハウススケートリンクホットココア貸靴'))).then(() => redraws.forEach(f => f()), () => {});

@@ -9,7 +9,7 @@ import { DurableObject } from 'cloudflare:workers';
 const MAX = 8;                     // ひとつのルームに入れる人数
 const SLOTS = [8, 8, 6, 8, 8];     // モードごとの枠の数：1v1v…, 2v2v…, 3v3, 4v4, 協力
 const SIZE = [1, 2, 3, 4, 8];      // 1チームの人数
-const MAPS = 8;
+const MAPS = 9;
 const GRACE = 60000;               // 回線が切れた人（タブを閉じた・再読み込みした・回線が切れた）の枠と試合の居場所を取っておく時間
 const HOST_WAIT = 10000;
 const LIMIT = 3600000;             // 人対人の試合（協力以外）は、始まってからこれだけで終わる

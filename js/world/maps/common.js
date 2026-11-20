@@ -9,6 +9,7 @@ const ENV = { // sky, fog and lights per time of day
   dusk: { sky: SKY_DUSK, fog: [0xb08a74, 80, 280], hemi: [0xe6dcd4, 0x3a3c4a, 0.85], sun: [0xffb878, 0.9, -60, 22, 10] }, // low sun over the sea, far sight for the SR
   morning: { sky: SKY_MORNING, fog: [0xcfd6da, 80, 300], hemi: [0xe8eef6, 0x7a7262, 1.0], sun: [0xffe8c8, 0.95, 70, 30, 25] }, // clear and low from the east: as far to see as the dusk
   snow: { sky: SKY_SNOW, fog: [0x2c3448, 40, 175], hemi: [0xa9bde6, 0x8a90a8, 1.05], sun: [0xc6d6ff, 0.45, -30, 50, 25] }, // a snowy night: the snow throws the light back up
+  winter: { sky: SKY_WINTER, fog: [0xdfe8f0, 100, 340], hemi: [0xe4ecf8, 0x8a96a6, 0.95], sun: [0xfff2dc, 0.7, 45, 40, 30] }, // a clear winter's day: far to see
   hall: { sky: SKY_DAY, fog: [0x6f6a62, 30, 120], hemi: [0xc9d2dc, 0x4a4238, 0.9], sun: [0xffdcaa, 0.75, -40, 40, -8] } // indoors by day: the sun low through the west windows
 };
 function setEnv(e) { sky.material.map = e.sky; scene.fog.color.setHex(e.fog[0]); scene.fog.near = e.fog[1]; scene.fog.far = e.fog[2]; hemi.color.setHex(e.hemi[0]); hemi.groundColor.setHex(e.hemi[1]); hemi.intensity = e.hemi[2]; moon.color.setHex(e.sun[0]); moon.intensity = e.sun[1]; moon.position.set(e.sun[2], e.sun[3], e.sun[4]); }
@@ -98,4 +99,25 @@ function sign(g, text, x, y, z, w, h, ry, bg, fg, vert) { // vert: one character
   const tex = canvasTex(tw, Math.max(32, Math.round(tw * h / w)), draw); tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
   mk(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }), x, y, z, g).rotation.y = ry;
   redraws.push(() => { draw(tex.image.getContext('2d'), tex.image.width, tex.image.height); tex.needsUpdate = true; });
+}
+/* Many small drawn pieces, drawn one by one, would cost hundreds of draw calls. parts(g) gathers them ([geometry, colour, placement])
+   and merges them into one mesh per material, coloured per vertex: lam(c) = lit by the lights, bas(c) = glowing. part() returns the placement
+   (an Object3D: set its rotation and scale after); mirror = true reflects it across x = 0 (for maps mirrored east to west).
+   merge(list, mat, parent) merges a list of one's own, e.g. into a group that turns; done() merges the rest into g. Drawn only: nothing collides */
+function parts(g) {
+  const lists = { lam: [], bas: [] }, MIR = new THREE.Matrix4().makeScale(-1, 1, 1);
+  const lam = c => ({ merge: 'lam', c }), bas = c => ({ merge: 'bas', c });
+  const part = (geo, mat, x, y, z, list, mirror) => { const o = new THREE.Object3D(); o.position.set(x, y, z); o.rotation.order = 'YXZ'; o.userData.mir = !!mirror; (list || lists)[mat.merge].push([geo, mat.c, o]); return o; };
+  const merge = (list, mat, parent) => {
+    if (!list.length) return;
+    const gs = list.map(([geo, c, o]) => { o.updateMatrix(); const mx = o.userData.mir ? MIR.clone().multiply(o.matrix) : o.matrix, q = (geo.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(mx);
+      if (mx.determinant() < 0) for (const at of ['position', 'normal']) { const a = q.attributes[at].array; for (let i = 0; i < a.length; i += 9) for (let k = 0; k < 3; k++) { const t = a[i + 3 + k]; a[i + 3 + k] = a[i + 6 + k]; a[i + 6 + k] = t; } } // a reflection turns the faces inside out: turn them back
+      return [q, c]; });
+    const n = gs.reduce((a, [q]) => a + q.attributes.position.count, 0), pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), cc = new THREE.Color(); let k = 0;
+    for (const [q, c] of gs) { const m = q.attributes.position.count; pos.set(q.attributes.position.array, k * 3); nor.set(q.attributes.normal.array, k * 3); cc.set(c); for (let i = k; i < k + m; i++) { col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b; } k += m; q.dispose(); }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); bg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const me = new THREE.Mesh(bg, mat); me.frustumCulled = false; (parent || g).add(me);
+  };
+  const done = () => { merge(lists.lam, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); merge(lists.bas, new THREE.MeshBasicMaterial({ vertexColors: true })); }; // (both sides: some pieces are seen from inside or behind)
+  return { lam, bas, part, merge, done };
 }
