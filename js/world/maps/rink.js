@@ -76,6 +76,12 @@ function buildRink(m) {
     };
     const pine = (x, z, h) => { col(x - 0.3, x + 0.3, 0, 1.0, z - 0.3, z + 0.3); col(x - 1.1, x + 1.1, 0.9, h * 0.75, z - 1.1, z + 1.1); M(new THREE.CylinderGeometry(0.22, 0.3, 1.2, 8), lam(DWOOD), x, 0.6, z);
       for (const [r, y0, y1] of [[1.9, 0.9, h * 0.55], [1.4, h * 0.4, h * 0.8], [0.9, h * 0.68, h]]) { M(new THREE.ConeGeometry(r, y1 - y0, 10), lam(GREEN), x, (y0 + y1) / 2, z); M(new THREE.ConeGeometry(r * 0.6, (y1 - y0) * 0.3, 10), lam(SNOW), x, y1 - (y1 - y0) * 0.12, z); } };
+    const rail = (x0, x1, z0, z1, y) => { // a hand rail: drawn as bars and posts; stops feet, not bullets
+      B('flat', x0, x1, y + 1.0, y + 1.06, z0, z1, GOLD, 0); B('flat', x0, x1, y + 0.5, y + 0.55, z0, z1, GOLD, 0); col(x0, x1, y, y + 1.06, z0, z1, true);
+      const L = Math.max(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 1.5)); for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n, z = z0 + (z1 - z0) * i / n; B('flat', x - 0.03, x + 0.03, y, y + 1.06, z - 0.03, z + 0.03, GOLD, 0); } };
+    // a flat roof to walk on (top at TOP + 0.2), the stair coming up through a hole in it; a parapet waist high along the edges given (n, s, w, e)
+    const rooftop = (x0, x1, z0, z1, hole, edges) => { slab(x0, x1, z0, z1, TOP + 0.2, hole, 0xdfe4ea); const y = TOP + 0.2, P = (a, b, c, d) => B('flat', a, b, y, y + 1.0, c, d, 0xb8c0ca);
+      if (edges.includes('n')) P(x0, x1, z0, z0 + 0.3); if (edges.includes('s')) P(x0, x1, z1 - 0.3, z1); if (edges.includes('w')) P(x0, x0 + 0.3, z0 + 0.3, z1 - 0.3); if (edges.includes('e')) P(x1 - 0.3, x1, z0 + 0.3, z1 - 0.3); };
     const snowWall = (x0, x1, z0, z1) => { B('flat', x0, x1, 0, 3.0, z0, z1, 0xe4eaf2); B('flat', x0 - 0.05, x1 + 0.05, 3.0, 3.12, z0 - 0.05, z1 + 0.05, SNOW, 0); }; // 3 m: high enough that even from the middle house's top floor no line drops over it onto the spawn points
     const lamp = (x, z) => { C('flat', x, 2.4, z, 0.07, 4.8, 0, DARK); col(x - 0.1, x + 0.1, 0, 4.8, z - 0.1, z + 0.1); B('lit', x - 0.2, x + 0.2, 4.7, 5.1, z - 0.2, z + 0.2, 0xfff2d0, 0); };
 
@@ -87,9 +93,10 @@ function buildRink(m) {
         wall(false, X0, X0 + T, Z0, Z1, y, y1, k ? [w(-0.7, 0.7), w(3, 4.4)] : [[-0.6, 0.6, 0, 2.2]], Ca); // back: no window low down, or one would line up with the front windows and the middle house's, and see into the spawn points behind
         wall(true, Z0, Z0 + T, X0 + T, X1 - T, y, y1, k ? [w(-57, -55.6), w(-52.4, -51)] : [w(-52.4, -51)], Ca); // north (the stair inside)
         wall(true, Z1 - T, Z1, X0 + T, X1 - T, y, y1, k ? [w(-57.6, -56.2), w(-54.9, -53.5), w(-52, -50.6)] : [[-55, -53.8, 0, 2.2], w(-57.6, -56.2), w(-52, -50.6)], Ca); } // south
-      flight('x', 1, sx, ex, iz0, iz0 + 1.2, 0); flight('x', -1, sx, ex, iz0 + 1.2, iz0 + 2.4, F[1]);
-      slab(ix0, ix1, iz0, iz1, F[1], [sx, ex, iz0, iz0 + 1.2], Ci); slab(ix0, ix1, iz0, iz1, F[2], [sx, ex, iz0 + 1.2, iz0 + 2.4], Ci); B('flat', X0 - 0.3, X1 + 0.3, TOP, TOP + 0.2, Z0 - 0.3, Z1 + 0.3, ROOF);
-      roof(X0 - 0.3, X1 + 0.3, Z0 - 0.3, Z1 + 0.3, TOP + 0.2, 2.6, false, ROOF); B('flat', -51.5, -50.5, TOP, TOP + 3.6, 2, 3, 0x8a5a4a, 0);
+      flight('x', 1, sx, ex, iz0, iz0 + 1.2, 0); flight('x', -1, sx, ex, iz0 + 1.2, iz0 + 2.4, F[1]); flight('x', 1, sx, ex, iz0, iz0 + 1.2, F[2]); // the third flight, over the first, comes out on the roof
+      slab(ix0, ix1, iz0, iz1, F[1], [sx, ex, iz0, iz0 + 1.2], Ci); slab(ix0, ix1, iz0, iz1, F[2], [sx, ex, iz0 + 1.2, iz0 + 2.4], Ci);
+      rooftop(X0 - 0.3, X1 + 0.3, Z0 - 0.3, Z1 + 0.3, [sx, ex, iz0, iz0 + 1.2], 'nswe'); rail(sx, ex, iz0 + 1.17, iz0 + 1.23, TOP + 0.2); rail(sx - 0.03, sx + 0.03, iz0, iz0 + 1.2, TOP + 0.2);
+      B('flat', -55, -54, TOP + 0.2, 13.2, 1.5, 2.5, 0x8a5a4a); // the chimney: cover on the roof, too tall to climb even from the parapet
       B('flat', -57.6, -55.2, 0, 0.95, 5.1, iz1, 0xd8d4cc); B('flat', ix0, -58, 0, 1.9, 4.6, iz1, 0xe8e8e8); B('flat', -55.5, -53.5, 0, 0.75, 1.5, 3, WOOD); // counter, fridge, table
       B('flat', -52.6, -50.4, F[1], F[1] + 0.55, 3, iz1, 0xc8c0e0); B('flat', -52.6, -50.4, F[1], F[1] + 1.1, iz1 - 0.15, iz1, WOOD); B('flat', ix0, ix0 + 0.6, F[1], F[1] + 2.1, 0.8, 2.8, WOOD); // bed, wardrobe
       B('flat', ix0, ix0 + 0.4, F[2], F[2] + 2.2, 0.5, 3, WOOD); B('flat', -53.5, -51.5, F[2], F[2] + 0.8, 2.8, 3.6, 0x4a6a8a); B('flat', -51.2, -49.9, F[2], F[2] + 0.78, -2.2, -0.6, WOOD); // shelves, sofa, desk
@@ -102,13 +109,13 @@ function buildRink(m) {
         wall(false, X0, X0 + T, Z0 + T, Z1 - T, y, y1, k ? [w(-4.4, -3), w(1, 2.4), w(3.8, 5.2)] : [[1.6, 2.8, 0, 2.2], w(3.8, 5.2)], Ca); // west
         wall(true, Z0, Z0 + T, X0, 0, y, y1, k ? [w(-6, -4.6), w(-3.6, -2.2), w(-0.7, 0)] : [[-3.6, -2.4, 0, 2.2], w(-1.2, 0)], Ca); // north (its window runs on into the east half's)
         wall(true, Z1 - T, Z1, X0, 0, y, y1, k ? [w(-6, -4.6), w(-3.6, -2.2), w(-0.7, 0)] : [[-3.6, -2.4, 0, 2.2], w(-6, -4.6), w(-1.2, 0)], Ca); } // south
-      flight('z', 1, ix0, ix0 + 1.2, sz, ez, 0); flight('z', -1, ix0 + 1.2, ix0 + 2.4, sz, ez, F[1]);
-      slab(ix0, 0, iz0, iz1, F[1], [ix0, ix0 + 1.2, sz, ez], Ci); slab(ix0, 0, iz0, iz1, F[2], [ix0 + 1.2, ix0 + 2.4, sz, ez], Ci); B('flat', X0 - 0.3, 0, TOP, TOP + 0.2, Z0 - 0.3, Z1 + 0.3, ROOF);
-      roof(X0 - 0.3, 0.3, Z0 - 0.3, Z1 + 0.3, TOP + 0.2, 2.8, true, ROOF);
+      flight('z', 1, ix0, ix0 + 1.2, sz, ez, 0); flight('z', -1, ix0 + 1.2, ix0 + 2.4, sz, ez, F[1]); flight('z', 1, ix0, ix0 + 1.2, sz, ez, F[2]); // and up to the roof
+      slab(ix0, 0, iz0, iz1, F[1], [ix0, ix0 + 1.2, sz, ez], Ci); slab(ix0, 0, iz0, iz1, F[2], [ix0 + 1.2, ix0 + 2.4, sz, ez], Ci);
+      rooftop(X0 - 0.3, 0, Z0 - 0.3, Z1 + 0.3, [ix0, ix0 + 1.2, sz, ez], 'nsw'); rail(ix0 + 1.17, ix0 + 1.23, sz, ez, TOP + 0.2); rail(ix0, ix0 + 1.2, sz - 0.03, sz + 0.03, TOP + 0.2);
       B('flat', -2.2, 0, 0, 1.05, 4.6, 5.2, 0xd8d4cc); for (const [x, z] of [[-3, 1.5], [-1.2, -2.6]]) { B('flat', x - 0.5, x + 0.5, 0, 0.75, z - 0.5, z + 0.5, WOOD); } // the café counter, tables
       B('flat', -0.3, 0, F[1], F[1] + 2.0, -2, 2, 0x7a8a9a); // lockers down the middle
       B('flat', -3, -1, F[2], F[2] + 0.8, 2.5, 3.3, 0x8a4a4a); B('flat', -6.4, -5.2, F[2], F[2] + 0.8, 1.5, 4, 0x8a4a4a); // sofas
-      if (s > 0) { sg('センターハウス', 0, 2.9, Z1 + 0.02, 3.2, 0.55, 0, '#f2efe6', '#1b2a3a'); sg('センターハウス', 0, 2.9, Z0 - 0.02, 3.2, 0.55, PI, '#f2efe6', '#1b2a3a'); B('flat', -1, 1, TOP + 2.2, TOP + 4.4, -1, 1, WHITE, 0); M(new THREE.ConeGeometry(1.2, 1.4, 4), lam(ROOF), 0, TOP + 5.1, 0, PI / 4); } } // a little cupola on the ridge
+      if (s > 0) { sg('センターハウス', 0, 2.9, Z1 + 0.02, 3.2, 0.55, 0, '#f2efe6', '#1b2a3a'); sg('センターハウス', 0, 2.9, Z0 - 0.02, 3.2, 0.55, PI, '#f2efe6', '#1b2a3a'); B('flat', -1.2, 1.2, TOP + 0.2, TOP + 2.4, -1.2, 1.2, WHITE); M(new THREE.ConeGeometry(1.6, 1.4, 4), lam(ROOF), 0, TOP + 3.1, 0, PI / 4); } } // a little cupola in the middle of the roof: cover between the halves, too far from the parapets to climb
 
     // ---- the rink: boards 1.1 m high you can see over, gates in them; ice inside
     { const x0 = -RX1, x1 = -RX0, b = 0.2, H = 1.1, BC = 0xf4f4f0;
