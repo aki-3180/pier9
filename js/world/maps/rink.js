@@ -83,7 +83,7 @@ function buildRink(m) {
     const rooftop = (x0, x1, z0, z1, hole, edges) => { slab(x0, x1, z0, z1, TOP + 0.2, hole, 0xdfe4ea); const y = TOP + 0.2, P = (a, b, c, d) => B('flat', a, b, y, y + 1.0, c, d, 0xb8c0ca);
       if (edges.includes('n')) P(x0, x1, z0, z0 + 0.3); if (edges.includes('s')) P(x0, x1, z1 - 0.3, z1); if (edges.includes('w')) P(x0, x0 + 0.3, z0 + 0.3, z1 - 0.3); if (edges.includes('e')) P(x1 - 0.3, x1, z0 + 0.3, z1 - 0.3); };
     const snowWall = (x0, x1, z0, z1) => { B('flat', x0, x1, 0, 3.0, z0, z1, 0xe4eaf2); B('flat', x0 - 0.05, x1 + 0.05, 3.0, 3.12, z0 - 0.05, z1 + 0.05, SNOW, 0); }; // 3 m: high enough that even from the middle house's top floor no line drops over it onto the spawn points
-    const lamp = (x, z) => { C('flat', x, 2.4, z, 0.07, 4.8, 0, DARK); col(x - 0.1, x + 0.1, 0, 4.8, z - 0.1, z + 0.1); B('lit', x - 0.2, x + 0.2, 4.7, 5.1, z - 0.2, z + 0.2, 0xfff2d0, 0); };
+    const lamp = (x, z) => { C('flat', x, 2.4, z, 0.07, 4.8, 0, DARK); B('lit', x - 0.2, x + 0.2, 4.7, 5.1, z - 0.2, z + 0.2, 0xfff2d0, 0); };
 
     // ---- the end house (west): 10 × 12 m, front to the east. Ground floor: a door front, back and south; a kitchen. First floor: a bedroom. Top: a study.
     // The stair runs along the north wall: 13 steps east up to the first floor, then 13 back west up to the top, each through a hole in the floor above
@@ -97,7 +97,8 @@ function buildRink(m) {
       slab(ix0, ix1, iz0, iz1, F[1], [sx, ex, iz0, iz0 + 1.2], Ci); slab(ix0, ix1, iz0, iz1, F[2], [sx, ex, iz0 + 1.2, iz0 + 2.4], Ci);
       rooftop(X0 - 0.3, X1 + 0.3, Z0 - 0.3, Z1 + 0.3, [sx, ex, iz0, iz0 + 1.2], 'nswe'); rail(sx, ex, iz0 + 1.17, iz0 + 1.23, TOP + 0.2); rail(sx - 0.03, sx + 0.03, iz0, iz0 + 1.2, TOP + 0.2);
       B('flat', -55, -54, TOP + 0.2, 13.2, 1.5, 2.5, 0x8a5a4a); // the chimney: cover on the roof, too tall to climb even from the parapet
-      B('flat', -57.6, -55.2, 0, 0.95, 5.1, iz1, 0xd8d4cc); B('flat', ix0, -58, 0, 1.9, 4.6, iz1, 0xe8e8e8); B('flat', -55.5, -53.5, 0, 0.75, 1.5, 3, WOOD); // counter, fridge, table
+      for (let k = 0; k < 3; k++) wall(false, -54.5, -54.3, iz0 + 2.4, iz1, F[k], F[k] + 3.1, [[1.4, 2.6, F[k], F[k] + 2.2]], 0xe6dccb); // a partition on each floor (the stair end stays open): its doorway is off the line of the front and back doors
+      B('flat', -57.6, -55.2, 0, 0.95, 5.1, iz1, 0xd8d4cc); B('flat', ix0, -58, 0, 1.9, 4.6, iz1, 0xe8e8e8); B('flat', -52.6, -51, 0, 0.75, 1.8, 3.4, WOOD); // counter, fridge, table
       B('flat', -52.6, -50.4, F[1], F[1] + 0.55, 3, iz1, 0xc8c0e0); B('flat', -52.6, -50.4, F[1], F[1] + 1.1, iz1 - 0.15, iz1, WOOD); B('flat', ix0, ix0 + 0.6, F[1], F[1] + 2.1, 0.8, 2.8, WOOD); // bed, wardrobe
       B('flat', ix0, ix0 + 0.4, F[2], F[2] + 2.2, 0.5, 3, WOOD); B('flat', -53.5, -51.5, F[2], F[2] + 0.8, 2.8, 3.6, 0x4a6a8a); B('flat', -51.2, -49.9, F[2], F[2] + 0.78, -2.2, -0.6, WOOD); // shelves, sofa, desk
       sg('ロッジ', X1 + 0.02, 2.75, 0, 1.8, 0.5, PI / 2, '#f2efe6', '#3a1a10'); }
@@ -107,11 +108,14 @@ function buildRink(m) {
     { const X0 = -7, Z0 = -6, Z1 = 6, T = 0.3, ix0 = X0 + T, iz0 = Z0 + T, iz1 = Z1 - T, Ca = 0x2f6a8a, Ci = 0xe6dccb, sz = -5.2, ez = sz + FL;
       for (let k = 0; k < 3; k++) { const y = F[k], y1 = k < 2 ? F[k + 1] : TOP, w = (a, b) => [a, b, y + 1.0, y + 2.0];
         wall(false, X0, X0 + T, Z0 + T, Z1 - T, y, y1, k ? [w(-4.4, -3), w(1, 2.4), w(3.8, 5.2)] : [[1.6, 2.8, 0, 2.2], w(3.8, 5.2)], Ca); // west
-        wall(true, Z0, Z0 + T, X0, 0, y, y1, k ? [w(-6, -4.6), w(-3.6, -2.2), w(-0.7, 0)] : [[-3.6, -2.4, 0, 2.2], w(-1.2, 0)], Ca); // north (its window runs on into the east half's)
+        wall(true, Z0, Z0 + T, X0, 0, y, y1, k === 1 ? [w(-6, -4.6), [-3.6, -2.4, y, y + 2.2], w(-0.7, 0)] : k ? [w(-6, -4.6), w(-3.6, -2.2), w(-0.7, 0)] : [[-3.6, -2.4, 0, 2.2], w(-1.2, 0)], Ca); // north (its window runs on into the east half's; on the first floor a door out to the balcony)
         wall(true, Z1 - T, Z1, X0, 0, y, y1, k ? [w(-6, -4.6), w(-3.6, -2.2), w(-0.7, 0)] : [[-3.6, -2.4, 0, 2.2], w(-6, -4.6), w(-1.2, 0)], Ca); } // south
       flight('z', 1, ix0, ix0 + 1.2, sz, ez, 0); flight('z', -1, ix0 + 1.2, ix0 + 2.4, sz, ez, F[1]); flight('z', 1, ix0, ix0 + 1.2, sz, ez, F[2]); // and up to the roof
       slab(ix0, 0, iz0, iz1, F[1], [ix0, ix0 + 1.2, sz, ez], Ci); slab(ix0, 0, iz0, iz1, F[2], [ix0 + 1.2, ix0 + 2.4, sz, ez], Ci);
       rooftop(X0 - 0.3, 0, Z0 - 0.3, Z1 + 0.3, [ix0, ix0 + 1.2, sz, ez], 'nsw'); rail(ix0 + 1.17, ix0 + 1.23, sz, ez, TOP + 0.2); rail(ix0, ix0 + 1.2, sz - 0.03, sz + 0.03, TOP + 0.2);
+      flight('z', -1, -8.4, -7.2, -1.0 - FL, -1.0, 0); // the outside stair, up the west face from the south
+      B('flat', -8.4, -7, F[1] - 0.2, F[1], Z0 - 1.6, -1.0 - FL, 0x7a8a9a); B('flat', X0, 0, F[1] - 0.2, F[1], Z0 - 1.6, Z0, 0x7a8a9a); // its landing, and the balcony along the north face (on into the east half's)
+      rail(-8.4, 0, Z0 - 1.63, Z0 - 1.57, F[1]); rail(-8.43, -8.37, Z0 - 1.6, -1.0 - FL, F[1]);
       B('flat', -2.2, 0, 0, 1.05, 4.6, 5.2, 0xd8d4cc); for (const [x, z] of [[-3, 1.5], [-1.2, -2.6]]) { B('flat', x - 0.5, x + 0.5, 0, 0.75, z - 0.5, z + 0.5, WOOD); } // the café counter, tables
       B('flat', -0.3, 0, F[1], F[1] + 2.0, -2, 2, 0x7a8a9a); // lockers down the middle
       B('flat', -3, -1, F[2], F[2] + 0.8, 2.5, 3.3, 0x8a4a4a); B('flat', -6.4, -5.2, F[2], F[2] + 0.8, 1.5, 4, 0x8a4a4a); // sofas
@@ -138,8 +142,8 @@ function buildRink(m) {
     B('corr', -12.5, -6.5, 1.0, 3.3, -21.6, -19.2, 0xe8e2d6); B('flat', -12.3, -6.7, 0.6, 1.0, -21.4, -19.4, DARK, 0); B('flat', -6.5, -5.0, 0.5, 2.8, -21.4, -19.4, 0xb3262e); B('lit', -11, -8, 1.6, 2.6, -19.18, -19.16, 0xffe2b0, 0);
     for (const x of [-11.5, -7.6]) { C('flat', x, 0.45, -20.4, 0.45, 2.3, 2, BLK); for (const z of [-21.3, -19.5]) col(x - 0.45, x + 0.45, 0, 0.9, z - 0.18, z + 0.18); }
     sg('ホットココア', -9.5, 3.0, -19.17, 2.6, 0.5, 0, '#f6efe0', '#5a2a10');
-    pine(-46, -21, 6.5); pine(-31, -24.5, 7); pine(-21, -26, 6); pine(-14, -15.5, 5.5); pine(-52, -26, 7); pine(-40, -28, 6);
-    for (const [x, z] of [[-44, -14], [-24, -18.5], [-9, -14], [-48, 14], [-12, 14], [-24, 17.5]]) lamp(x, z);
+    pine(-46, -21, 6.5); pine(-31, -24.5, 7); pine(-21, -26, 6); pine(-17, -21, 5.5); pine(-40, -28, 6);
+    for (const [x, z] of [[-44, -14], [-24, -18.5], [-9, -18], [-48, 14], [-12, 14], [-24, 17.5]]) lamp(x, z);
     B('flat', -HX, HX * 0 - 0.001, 0, 1.0, -HZ - 0.4, -HZ - 0.3, 0x5a6a7a, 0); for (let x = -HX; x < 0; x += 2) B('flat', x - 0.04, x + 0.04, 0, 1.05, -HZ - 0.4, -HZ - 0.3, 0x5a6a7a, 0); // the railing over the harbour
 
     // ---- south of the rink: the skate-hire hut (a hatch to shoot through, a door in its east end), benches, a snowman, pines
@@ -150,9 +154,36 @@ function buildRink(m) {
       for (let i = 0; i < 6; i++) B('flat', X0 + 0.5 + i * 1.0, X0 + 1.1 + i * 1.0, 1.05, 1.25, Z0 + 0.1, Z0 + 0.45, [RED, BLUE, WHITE][i % 3], 0); // skates on the counter
       sg('貸靴', (X0 + X1) / 2, 2.55, Z0 - 0.02, 2.0, 0.45, PI, '#f6efe0', '#3a1a10'); }
     for (const x of [-38, -26, -20]) { B('flat', x - 1.2, x + 1.2, 0, 0.45, 14.1, 14.6, WOOD); B('flat', x - 1.2, x + 1.2, 0.45, 0.9, 14.55, 14.65, WOOD, 0); }
-    { const x = -20, z = 22; col(x - 0.6, x + 0.6, 0, 1.9, z - 0.6, z + 0.6); for (const [r, y] of [[0.65, 0.6], [0.48, 1.4], [0.34, 1.98]]) M(new THREE.SphereGeometry(r, 14, 10), lam(SNOW), x, y, z); M(new THREE.CylinderGeometry(0.24, 0.24, 0.35, 12), lam(BLK), x, 2.42, z); }
-    pine(-45, 21, 6.5); pine(-14, 21, 6); pine(-26, 26.5, 7); pine(-53, 24, 6.5); pine(-8, 26, 5.5); pine(-38, 27, 6);
+    { const x = -21.5, z = 25; col(x - 0.6, x + 0.6, 0, 1.9, z - 0.6, z + 0.6); for (const [r, y] of [[0.65, 0.6], [0.48, 1.4], [0.34, 1.98]]) M(new THREE.SphereGeometry(r, 14, 10), lam(SNOW), x, y, z); M(new THREE.CylinderGeometry(0.24, 0.24, 0.35, 12), lam(BLK), x, 2.42, z); }
+    pine(-45, 21, 6.5); pine(-26, 26.5, 7); pine(-53, 24, 6.5); pine(-38, 27, 6); pine(-1.6, 28.4, 5.5);
     B('flat', -HX, 0, 0, 1.2, HZ + 0.3, HZ + 0.9, 0x6a5a4a, 0); // a low fence along the south edge, past the map
+
+    // ---- the changing rooms, north of the middle house: a single storey you walk through end to end; windows north and south; a bench down the middle.
+    // Its roof (3.2 m) is a running jump from the middle house's balcony (3.3 m), and back
+    { const X0 = -13, X1 = -5, Z0 = -14, Z1 = -9.5, T = 0.25, H = 3.0, Cc = 0xc8b48a, w = (a, b) => [a, b, 1.0, 2.0];
+      wall(true, Z0, Z0 + T, X0, X1, 0, H, [w(-11.2, -9.8), w(-8.2, -6.8)], Cc); wall(true, Z1 - T, Z1, X0, X1, 0, H, [w(-11.2, -9.8), w(-8.2, -6.8)], Cc);
+      wall(false, X0, X0 + T, Z0 + T, Z1 - T, 0, H, [[-12.4, -11.2, 0, 2.2]], Cc); wall(false, X1 - T, X1, Z0 + T, Z1 - T, 0, H, [[-12.4, -11.2, 0, 2.2]], Cc);
+      B('flat', X0 - 0.2, X1 + 0.2, H, H + 0.2, Z0 - 0.2, Z1 + 0.2, ROOF); B('flat', X0 - 0.2, X1 + 0.2, H + 0.2, H + 0.3, Z0 - 0.2, Z1 + 0.2, SNOW, 0);
+      B('flat', -11.4, -6.6, 0, 0.45, -11.0, -10.6, WOOD); for (const [a, b] of [[-12.7, -11.4], [-9.6, -8.4], [-6.6, -5.3]]) B('flat', a, b, 0, 1.9, Z1 - 0.7, Z1 - T, 0x7a8a9a); // bench; lockers, between the windows
+      sg('更衣室', -9, 2.5, Z1 + 0.02, 1.8, 0.45, 0, '#f2efe6', '#1b2a3a'); }
+    // ---- the sledding hill, south of the middle house: terraces of snow 0.28 m high that you walk up, from every side, to a top 2.52 m up
+    for (let k = 0; k < 9; k++) B('flat', -17 + k * 0.5, -3 - k * 0.5, 0, 0.28 * (k + 1), 16 + k * 0.5, 28 - k * 0.5, k % 2 ? 0xe9eef4 : 0xf2f5f9);
+    B('flat', -12.6, -11.4, 2.52, 4.5, 23, 23.6, RED); B('flat', -12.8, -11.2, 4.5, 4.8, 22.8, 23.8, ROOF, 0); sg('そり山', -12, 4.1, 22.98, 1.6, 0.4, PI, '#f6efe0', '#3a1a10'); // the start post: a little cover on top
+    { const sl = M(new THREE.BoxGeometry(1.2, 0.15, Math.hypot(4, 2.52)), lam(0x2f6fb2), -8.2, 1.4, 26); sl.rotation.x = Math.atan2(2.52, 4); } // the slide down the south side, drawn
+    // ---- between the rink and the middle house: a snow sculpture in the line of the rink's gate, and walls of ice blocks
+    B('flat', -13.2, -11.2, 0, 3.6, -1.2, 1.2, 0xeef2f6); M(new THREE.SphereGeometry(1.1, 12, 8), lam(SNOW), -12.2, 4.0, 0); M(new THREE.SphereGeometry(0.4, 8, 6), lam(SNOW), -12.2, 5.0, 0.7); // a snow bear, 3.6 m: cover, out of a jump's reach from the outside stair
+    for (const [z0, z1] of [[-9, -5.5], [5.5, 9]]) { B('flat', -12.6, -11.4, 0, 1.4, z0, z1, 0xbfe0f0); for (let z = z0 + 0.7; z < z1; z += 0.7) B('flat', -12.62, -11.38, 0, 1.4, z - 0.02, z, 0xa8d0e8, 0); }
+    // ---- on the ice: two heaps of shaved snow, scraped off by the resurfacer
+    for (const [x, z] of [[-22, -6], [-34, -4.5]]) { B('flat', x - 1, x + 1, 0, 1.0, z - 1, z + 1, 0xf4f8fb); M(new THREE.SphereGeometry(1.2, 12, 8, 0, PI * 2, 0, PI / 2), lam(0xf4f8fb), x, 0.9, z).scale.y = 0.4; }
+    // ---- the way in at the base: two ticket booths and the gate between them
+    for (const [z0, z1] of [[-4, -2.4], [2.4, 4]]) { B('flat', -45, -43.4, 0, 2.6, z0, z1, 0x2c5c9c); B('flat', -45.2, -43.2, 2.6, 2.8, z0 - 0.2, z1 + 0.2, ROOF); B('lit', -43.42, -43.4, 1.2, 1.9, z0 + 0.3, z1 - 0.3, 0xa8d0f0, 0); }
+    B('flat', -44.4, -44, 2.8, 3.6, -4, 4, 0x2c5c9c); sg('入場口', -43.98, 3.2, 0, 2.4, 0.5, PI / 2, '#2c5c9c', '#f6f2e6');
+    // ---- north-west: cars parked in the snow (shots pass under them); south-west: a garden of clipped hedges, chest high
+    const car = (x0, x1, z0, z1, c) => { const al = x1 - x0 > z1 - z0; B('flat', x0, x1, 0.35, 1.05, z0, z1, c); if (al) B('flat', x0 + 1, x1 - 1.2, 1.05, 1.55, z0 + 0.1, z1 - 0.1, c); else B('flat', x0 + 0.1, x1 - 0.1, 1.05, 1.55, z0 + 1, z1 - 1.2, c);
+      B('flat', x0 + 0.1, x1 - 0.1, 1.55, 1.62, z0 + 0.1, z1 - 0.1, SNOW, 0); for (const [wx, wz] of al ? [[x0 + 0.7, z0], [x1 - 0.7, z0], [x0 + 0.7, z1], [x1 - 0.7, z1]] : [[x0, z0 + 0.7], [x1, z0 + 0.7], [x0, z1 - 0.7], [x1, z1 - 0.7]]) col(wx - 0.3, wx + 0.3, 0, 0.35, wz - 0.3, wz + 0.3); };
+    car(-58, -53.8, -20, -18.2, 0xa5352f); car(-58, -53.8, -23.6, -21.8, 0x8b929b); car(-50, -48.2, -27, -22.8, 0x2c5c9c);
+    const hedge = (x0, x1, z0, z1) => { B('flat', x0, x1, 0, 1.4, z0, z1, 0x2f5a3a); B('flat', x0 - 0.03, x1 + 0.03, 1.4, 1.5, z0 - 0.03, z1 + 0.03, SNOW, 0); };
+    hedge(-58, -50, 15.5, 16.3); hedge(-47, -41, 15.5, 16.3); hedge(-50.4, -49.6, 16.3, 22); hedge(-60, -55.5, 24, 24.8); hedge(-46, -40, 25, 25.8); hedge(-42.4, -41.6, 18.5, 25);
 
     // ---- the base, behind and beside the end house: snow walls to stand behind, a bench, a lamp
     snowWall(-53, -46.5, -12.4, -11.4); snowWall(-53, -46.5, 11.4, 12.4); snowWall(-49.2, -46.5, -11.4, -6); snowWall(-49.2, -46.5, 6, 11.4); // closed against the house's corners: the way out of these pockets is round the back
